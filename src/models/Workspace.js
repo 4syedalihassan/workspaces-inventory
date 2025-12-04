@@ -82,7 +82,8 @@ class Workspace {
         running_mode_auto_stop_timeout_in_minutes = excluded.running_mode_auto_stop_timeout_in_minutes,
         root_volume_size_gib = excluded.root_volume_size_gib,
         user_volume_size_gib = excluded.user_volume_size_gib,
-        terminated_at = excluded.terminated_at,
+        created_at = COALESCE(workspaces.created_at, excluded.created_at),
+        terminated_at = COALESCE(workspaces.terminated_at, excluded.terminated_at),
         last_known_user_connection_timestamp = excluded.last_known_user_connection_timestamp,
         tags = excluded.tags,
         updated_at = CURRENT_TIMESTAMP

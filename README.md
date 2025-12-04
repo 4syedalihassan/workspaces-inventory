@@ -70,13 +70,11 @@ Or build and run manually:
 # Build the Docker image
 docker build -t workspaces-inventory .
 
-# Run the container
+# Run the container (using .env file for credentials - recommended)
 docker run -d \
   --name workspaces-inventory \
   -p 3000:3000 \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_ACCESS_KEY_ID=your_key \
-  -e AWS_SECRET_ACCESS_KEY=your_secret \
+  --env-file .env \
   -v workspaces-data:/app/data \
   workspaces-inventory
 ```

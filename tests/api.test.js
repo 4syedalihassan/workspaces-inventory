@@ -81,7 +81,7 @@ jest.mock('../src/models/database', () => {
 });
 
 // Now require the models and app
-const db = require('../src/models/database');
+require('../src/models/database');
 const Workspace = require('../src/models/Workspace');
 const WorkspaceUsage = require('../src/models/WorkspaceUsage');
 const CloudTrailEvent = require('../src/models/CloudTrailEvent');

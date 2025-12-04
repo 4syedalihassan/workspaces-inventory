@@ -118,7 +118,10 @@ if (!columns.includes('user_display_name')) {
   try {
     db.exec('ALTER TABLE workspaces ADD COLUMN user_display_name TEXT');
   } catch (e) {
-    // Column might already exist
+    // Log error if it's not about duplicate column
+    if (!e.message.includes('duplicate column')) {
+      console.error('Migration error adding user_display_name column:', e.message);
+    }
   }
 }
 
@@ -126,7 +129,10 @@ if (!columns.includes('compute_type')) {
   try {
     db.exec('ALTER TABLE workspaces ADD COLUMN compute_type TEXT');
   } catch (e) {
-    // Column might already exist
+    // Log error if it's not about duplicate column
+    if (!e.message.includes('duplicate column')) {
+      console.error('Migration error adding compute_type column:', e.message);
+    }
   }
 }
 

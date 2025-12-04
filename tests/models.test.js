@@ -20,6 +20,7 @@ jest.mock('../src/models/database', () => {
       root_volume_size_gib INTEGER,
       user_volume_size_gib INTEGER,
       created_at TEXT,
+      created_by TEXT,
       terminated_at TEXT,
       last_known_user_connection_timestamp TEXT,
       tags TEXT,

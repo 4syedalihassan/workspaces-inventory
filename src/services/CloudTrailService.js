@@ -1,6 +1,7 @@
 const { CloudTrailClient, LookupEventsCommand } = require('@aws-sdk/client-cloudtrail');
 const config = require('../config');
 const CloudTrailEvent = require('../models/CloudTrailEvent');
+const Workspace = require('../models/Workspace');
 const SyncHistory = require('../models/SyncHistory');
 
 class CloudTrailService {
@@ -192,6 +193,36 @@ class CloudTrailService {
       };
     }
     return null;
+  }
+
+  // Update workspaces with creation info from CloudTrail events
+  updateWorkspacesCreationInfo() {
+    // Get all workspaces that are missing created_at or created_by
+    const workspaces = Workspace.getAll({});
+    let updatedCount = 0;
+
+    for (const ws of workspaces) {
+      // Skip if both fields are already populated
+      if (ws.created_at && ws.created_by) {
+        continue;
+      }
+
+      // Look for creation info from CloudTrail
+      const creationInfo = this.getCreationInfo(ws.id);
+      if (creationInfo) {
+        // Update the workspace with creation info
+        Workspace.upsert({
+          ...ws,
+          tags: JSON.parse(ws.tags || '{}'),
+          created_at: creationInfo.created_at,
+          created_by: creationInfo.created_by,
+          user_display_name: creationInfo.user_display_name || ws.user_display_name
+        });
+        updatedCount++;
+      }
+    }
+
+    return updatedCount;
   }
 }
 

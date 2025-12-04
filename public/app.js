@@ -138,6 +138,7 @@ async function loadWorkspaces() {
                 <td>${ws.root_volume_size_gib || '-'} GiB</td>
                 <td>${ws.user_volume_size_gib || '-'} GiB</td>
                 <td>${ws.created_at ? new Date(ws.created_at).toLocaleDateString() : '-'}</td>
+                <td>${ws.created_by || '-'}</td>
                 <td>${ws.last_known_user_connection_timestamp ? new Date(ws.last_known_user_connection_timestamp).toLocaleDateString() : '-'}</td>
             </tr>
         `).join('');
@@ -171,7 +172,8 @@ async function showWorkspaceDetails(id) {
                     <h6>Basic Info</h6>
                     <table class="table table-sm">
                         <tr><th>ID</th><td><code>${workspace.id}</code></td></tr>
-                        <tr><th>User</th><td>${workspace.user_name}</td></tr>
+                        <tr><th>Assigned To</th><td>${workspace.user_name}</td></tr>
+                        <tr><th>Display Name</th><td>${workspace.user_display_name || '-'}</td></tr>
                         <tr><th>State</th><td><span class="badge badge-${workspace.state?.toLowerCase()}">${workspace.state}</span></td></tr>
                         <tr><th>Computer Name</th><td>${workspace.computer_name || '-'}</td></tr>
                         <tr><th>IP Address</th><td>${workspace.ip_address || '-'}</td></tr>
@@ -190,11 +192,11 @@ async function showWorkspaceDetails(id) {
             <div class="row mt-3">
                 <div class="col-md-6">
                     <h6>Creation Info</h6>
-                    ${workspace.creation_info ? `
+                    ${(workspace.created_at || workspace.created_by || workspace.creation_info) ? `
                         <table class="table table-sm">
-                            <tr><th>Created At</th><td>${new Date(workspace.creation_info.created_at).toLocaleString()}</td></tr>
-                            <tr><th>Created By</th><td>${workspace.creation_info.created_by}</td></tr>
-                            <tr><th>Source IP</th><td>${workspace.creation_info.source_ip || '-'}</td></tr>
+                            <tr><th>Created At</th><td>${workspace.created_at ? new Date(workspace.created_at).toLocaleString() : (workspace.creation_info?.created_at ? new Date(workspace.creation_info.created_at).toLocaleString() : '-')}</td></tr>
+                            <tr><th>Created By</th><td>${workspace.created_by || workspace.creation_info?.created_by || '-'}</td></tr>
+                            <tr><th>Source IP</th><td>${workspace.creation_info?.source_ip || '-'}</td></tr>
                         </table>
                     ` : '<p class="text-muted">No creation info available</p>'}
                 </div>

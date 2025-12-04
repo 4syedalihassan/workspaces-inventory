@@ -15,7 +15,7 @@ class ExportService {
     // Define columns
     worksheet.columns = [
       { header: 'Workspace ID', key: 'id', width: 25 },
-      { header: 'User Name', key: 'user_name', width: 25 },
+      { header: 'Assigned To', key: 'user_name', width: 25 },
       { header: 'Display Name', key: 'user_display_name', width: 30 },
       { header: 'State', key: 'state', width: 15 },
       { header: 'Compute Type', key: 'compute_type', width: 15 },
@@ -26,6 +26,7 @@ class ExportService {
       { header: 'Computer Name', key: 'computer_name', width: 20 },
       { header: 'IP Address', key: 'ip_address', width: 15 },
       { header: 'Created At', key: 'created_at', width: 22 },
+      { header: 'Created By', key: 'created_by', width: 25 },
       { header: 'Terminated At', key: 'terminated_at', width: 22 },
       { header: 'Last Connection', key: 'last_known_user_connection_timestamp', width: 22 },
       { header: 'Tags', key: 'tags', width: 30 }
@@ -156,7 +157,7 @@ class ExportService {
     const headers = [
       'id', 'user_name', 'user_display_name', 'state', 'compute_type', 'bundle_id', 'running_mode',
       'root_volume_size_gib', 'user_volume_size_gib', 'computer_name',
-      'ip_address', 'created_at', 'terminated_at', 'last_known_user_connection_timestamp', 'tags'
+      'ip_address', 'created_at', 'created_by', 'terminated_at', 'last_known_user_connection_timestamp', 'tags'
     ];
 
     let csv = headers.join(',') + '\n';

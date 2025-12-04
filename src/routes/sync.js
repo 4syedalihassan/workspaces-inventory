@@ -3,6 +3,7 @@ const router = express.Router();
 const WorkspacesService = require('../services/WorkspacesService');
 const CloudTrailService = require('../services/CloudTrailService');
 const BillingService = require('../services/BillingService');
+const DirectoryService = require('../services/DirectoryService');
 const SyncHistory = require('../models/SyncHistory');
 
 // Sync all data
@@ -12,6 +13,7 @@ router.post('/all', async (req, res) => {
       workspaces: null,
       cloudtrail: null,
       billing: null,
+      directory: null,
       workspacesCreationInfoUpdated: 0
     };
 
@@ -43,6 +45,13 @@ router.post('/all', async (req, res) => {
       results.billing = await BillingService.syncBillingData(monthsBack);
     } catch (error) {
       results.billing = { success: false, error: error.message };
+    }
+
+    // Sync Directory Service user data
+    try {
+      results.directory = await DirectoryService.syncDirectoryUserData();
+    } catch (error) {
+      results.directory = { success: false, error: error.message };
     }
 
     res.json(results);
@@ -87,6 +96,28 @@ router.post('/billing', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error syncing billing:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Sync Directory Service user data only
+router.post('/directory', async (req, res) => {
+  try {
+    const result = await DirectoryService.syncDirectoryUserData();
+    res.json(result);
+  } catch (error) {
+    console.error('Error syncing directory user data:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get orphaned workspaces (user doesn't exist in directory)
+router.get('/directory/orphaned', async (req, res) => {
+  try {
+    const orphaned = await DirectoryService.findOrphanedWorkspaces();
+    res.json({ data: orphaned, count: orphaned.length });
+  } catch (error) {
+    console.error('Error finding orphaned workspaces:', error);
     res.status(500).json({ error: error.message });
   }
 });

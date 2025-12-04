@@ -62,13 +62,13 @@ class DirectoryService {
 
   /**
    * Create a DirectoryServiceDataClient for a specific directory
-   * @param {string} directoryId - The directory ID
+   * Note: The directoryId is passed to API calls, not the client constructor.
+   * The client configuration is the same for all directories.
    * @returns {DirectoryServiceDataClient} Configured client
    */
-  createDataClient(directoryId) {
+  createDataClient() {
     return new DirectoryServiceDataClient({
-      ...this.dsDataClientConfig,
-      // The data client uses the directory ID for routing
+      ...this.dsDataClientConfig
     });
   }
 
@@ -80,7 +80,7 @@ class DirectoryService {
    */
   async getUserDetails(directoryId, userName) {
     try {
-      const dataClient = this.createDataClient(directoryId);
+      const dataClient = this.createDataClient();
       const command = new DescribeUserCommand({
         DirectoryId: directoryId,
         SAMAccountName: userName
@@ -122,7 +122,7 @@ class DirectoryService {
    */
   async getUserGroups(directoryId, userName) {
     try {
-      const dataClient = this.createDataClient(directoryId);
+      const dataClient = this.createDataClient();
       const groups = [];
       let nextToken = null;
 

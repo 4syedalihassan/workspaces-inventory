@@ -93,7 +93,7 @@ app.get('/api/dashboard', (req, res) => {
 });
 
 // Serve frontend for all other routes
-app.user((req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 

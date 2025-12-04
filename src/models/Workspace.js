@@ -67,9 +67,9 @@ class Workspace {
       INSERT INTO workspaces (
         id, directory_id, user_name, user_display_name, ip_address, state, bundle_id,
         compute_type, subnet_id, computer_name, running_mode, running_mode_auto_stop_timeout_in_minutes,
-        root_volume_size_gib, user_volume_size_gib, created_at, terminated_at,
+        root_volume_size_gib, user_volume_size_gib, created_at, created_by, terminated_at,
         last_known_user_connection_timestamp, tags, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(id) DO UPDATE SET
         directory_id = excluded.directory_id,
         user_name = excluded.user_name,
@@ -85,6 +85,7 @@ class Workspace {
         root_volume_size_gib = excluded.root_volume_size_gib,
         user_volume_size_gib = excluded.user_volume_size_gib,
         created_at = COALESCE(workspaces.created_at, excluded.created_at),
+        created_by = COALESCE(workspaces.created_by, excluded.created_by),
         terminated_at = COALESCE(workspaces.terminated_at, excluded.terminated_at),
         last_known_user_connection_timestamp = excluded.last_known_user_connection_timestamp,
         tags = excluded.tags,
@@ -107,6 +108,7 @@ class Workspace {
       workspace.root_volume_size_gib,
       workspace.user_volume_size_gib,
       workspace.created_at,
+      workspace.created_by || null,
       workspace.terminated_at,
       workspace.last_known_user_connection_timestamp,
       JSON.stringify(workspace.tags || {})

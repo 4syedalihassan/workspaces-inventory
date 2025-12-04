@@ -23,6 +23,7 @@ jest.mock('../src/models/database', () => {
       root_volume_size_gib INTEGER,
       user_volume_size_gib INTEGER,
       created_at TEXT,
+      created_by TEXT,
       terminated_at TEXT,
       last_known_user_connection_timestamp TEXT,
       tags TEXT,
@@ -124,6 +125,7 @@ describe('API Tests', () => {
       root_volume_size_gib: 80,
       user_volume_size_gib: 50,
       created_at: '2024-01-15T10:00:00Z',
+      created_by: 'admin@example.com',
       terminated_at: null,
       last_known_user_connection_timestamp: '2024-11-20T15:30:00Z',
       tags: { Name: 'TestWorkspace' }
@@ -145,6 +147,7 @@ describe('API Tests', () => {
       root_volume_size_gib: 175,
       user_volume_size_gib: 100,
       created_at: '2024-02-20T08:00:00Z',
+      created_by: 'devops@example.com',
       terminated_at: null,
       last_known_user_connection_timestamp: '2024-11-19T10:00:00Z',
       tags: {}
@@ -220,12 +223,24 @@ describe('API Tests', () => {
       expect(response.body.data[0].running_mode).toBe('AUTO_STOP');
     });
 
+    test('GET /api/workspaces should return created_by field', async () => {
+      const response = await request(app).get('/api/workspaces');
+      
+      expect(response.status).toBe(200);
+      // Check that created_by field is present in all workspaces
+      response.body.data.forEach(ws => {
+        expect(ws.created_by).toBeDefined();
+        expect(['admin@example.com', 'devops@example.com']).toContain(ws.created_by);
+      });
+    });
+
     test('GET /api/workspaces/:id should return workspace details', async () => {
       const response = await request(app).get('/api/workspaces/ws-test001');
       
       expect(response.status).toBe(200);
       expect(response.body.id).toBe('ws-test001');
       expect(response.body.user_name).toBe('testuser1');
+      expect(response.body.created_by).toBe('admin@example.com');
       expect(response.body.creation_info).toBeDefined();
     });
 
@@ -327,9 +342,11 @@ describe('API Tests', () => {
       expect(response.headers['content-type']).toContain('text/csv');
       expect(response.text).toContain('id,user_name,user_display_name');
       expect(response.text).toContain('compute_type');
+      expect(response.text).toContain('created_by');
       expect(response.text).toContain('ws-test001');
       expect(response.text).toContain('Test User One');
       expect(response.text).toContain('STANDARD');
+      expect(response.text).toContain('admin@example.com');
     });
 
     test('GET /api/export/workspaces/excel should return Excel file', async () => {

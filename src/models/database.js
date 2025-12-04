@@ -33,6 +33,7 @@ db.exec(`
     root_volume_size_gib INTEGER,
     user_volume_size_gib INTEGER,
     created_at TEXT,
+    created_by TEXT,
     terminated_at TEXT,
     last_known_user_connection_timestamp TEXT,
     tags TEXT, -- JSON string
@@ -132,6 +133,17 @@ if (!columns.includes('compute_type')) {
     // Log error if it's not about duplicate column
     if (!e.message.includes('duplicate column')) {
       console.error('Migration error adding compute_type column:', e.message);
+    }
+  }
+}
+
+if (!columns.includes('created_by')) {
+  try {
+    db.exec('ALTER TABLE workspaces ADD COLUMN created_by TEXT');
+  } catch (e) {
+    // Log error if it's not about duplicate column
+    if (!e.message.includes('duplicate column')) {
+      console.error('Migration error adding created_by column:', e.message);
     }
   }
 }

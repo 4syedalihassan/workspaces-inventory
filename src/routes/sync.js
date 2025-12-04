@@ -11,7 +11,8 @@ router.post('/all', async (req, res) => {
     const results = {
       workspaces: null,
       cloudtrail: null,
-      billing: null
+      billing: null,
+      workspacesCreationInfoUpdated: 0
     };
 
     // Sync WorkSpaces
@@ -27,6 +28,13 @@ router.post('/all', async (req, res) => {
       results.cloudtrail = await CloudTrailService.syncCloudTrailEvents(daysBack);
     } catch (error) {
       results.cloudtrail = { success: false, error: error.message };
+    }
+
+    // Update workspaces with creation info from CloudTrail
+    try {
+      results.workspacesCreationInfoUpdated = CloudTrailService.updateWorkspacesCreationInfo();
+    } catch (error) {
+      console.error('Error updating workspace creation info:', error);
     }
 
     // Sync Billing data
@@ -60,7 +68,11 @@ router.post('/cloudtrail', async (req, res) => {
   try {
     const daysBack = parseInt(req.query.days, 10) || 7;
     const result = await CloudTrailService.syncCloudTrailEvents(daysBack);
-    res.json(result);
+    
+    // Update workspaces with creation info from CloudTrail
+    const creationInfoUpdated = CloudTrailService.updateWorkspacesCreationInfo();
+    
+    res.json({ ...result, workspacesCreationInfoUpdated: creationInfoUpdated });
   } catch (error) {
     console.error('Error syncing CloudTrail:', error);
     res.status(500).json({ error: error.message });

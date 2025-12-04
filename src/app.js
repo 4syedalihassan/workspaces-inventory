@@ -22,6 +22,7 @@ const syncRoutes = require('./routes/sync');
 const WorkspacesService = require('./services/WorkspacesService');
 const CloudTrailService = require('./services/CloudTrailService');
 const BillingService = require('./services/BillingService');
+const DirectoryService = require('./services/DirectoryService');
 
 const app = express();
 
@@ -120,6 +121,13 @@ if (config.server.nodeEnv === 'production') {
       console.log('Billing sync completed');
     } catch (error) {
       console.error('Billing sync failed:', error.message);
+    }
+
+    try {
+      await DirectoryService.syncDirectoryUserData();
+      console.log('Directory Service user data sync completed');
+    } catch (error) {
+      console.error('Directory Service sync failed:', error.message);
     }
   });
 }

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Workspace = require('../models/Workspace');
 const CloudTrailService = require('../services/CloudTrailService');
+const DirectoryService = require('../services/DirectoryService');
 
 // Get all workspaces with filters
 router.get('/', (req, res) => {
@@ -34,7 +35,7 @@ router.get('/', (req, res) => {
 });
 
 // Get workspace by ID with detailed info
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const workspace = Workspace.getById(req.params.id);
     
@@ -47,9 +48,18 @@ router.get('/:id', (req, res) => {
     const terminationInfo = CloudTrailService.getTerminationInfo(req.params.id);
     const history = CloudTrailService.getWorkspaceHistory(req.params.id);
 
+    // Parse tags to get directory user data
+    let tags = {};
+    try {
+      tags = JSON.parse(workspace.tags || '{}');
+    } catch {
+      tags = {};
+    }
+
     res.json({
       ...workspace,
-      tags: JSON.parse(workspace.tags || '{}'),
+      tags: tags,
+      directory_user: tags.directory_user || null,
       creation_info: creationInfo,
       termination_info: terminationInfo,
       history: history.slice(0, 20) // Last 20 events
@@ -57,6 +67,22 @@ router.get('/:id', (req, res) => {
   } catch (error) {
     console.error('Error fetching workspace:', error);
     res.status(500).json({ error: 'Failed to fetch workspace' });
+  }
+});
+
+// Get workspace with fresh directory data (fetches from AWS Directory Service)
+router.get('/:id/directory', async (req, res) => {
+  try {
+    const workspace = await DirectoryService.getWorkspaceWithDirectoryData(req.params.id);
+    
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+
+    res.json(workspace);
+  } catch (error) {
+    console.error('Error fetching workspace directory data:', error);
+    res.status(500).json({ error: 'Failed to fetch workspace directory data' });
   }
 });
 

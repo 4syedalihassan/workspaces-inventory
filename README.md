@@ -42,6 +42,26 @@ This application provides:
   - `workspaces:DescribeWorkspaceBundles`
   - `cloudtrail:LookupEvents`
   - `ce:GetCostAndUsage`
+  - `ds:DescribeDirectories`
+  - `ds-data:DescribeUser` (requires Directory Data Access enabled)
+  - `ds-data:ListGroupsForMember` (requires Directory Data Access enabled)
+
+#### Directory Data Access
+
+To sync user data from AWS Directory Service (display names, email addresses, group memberships), **Directory Data Access** must be enabled for each AWS Managed Microsoft AD directory. This feature allows API access to read user and group information from the directory.
+
+To enable Directory Data Access:
+1. Open the AWS Directory Service console
+2. Select your directory
+3. Go to "Networking & security" tab
+4. Under "Directory Data Access", click "Enable"
+
+If Directory Data Access is not enabled, the application will log an error message:
+```
+Access denied when querying directory <directory-id>. Ensure Directory Data Access is enabled in the AWS Console for this directory.
+```
+
+The application will continue to function but directory user data (display names, email, groups) will not be synced.
 
 ### Option 1: Docker (Recommended)
 

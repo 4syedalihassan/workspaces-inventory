@@ -213,6 +213,26 @@ describe('DirectoryService', () => {
       
       expect(result).toBeNull();
     });
+
+    test('should cache access denied directories and skip subsequent calls', async () => {
+      const error = new Error('Access denied');
+      error.name = 'AccessDeniedException';
+      mockDSDataClientSend.mockRejectedValue(error);
+
+      // First call should hit the API and cache the access denied status
+      const result1 = await DirectoryService.getUserDetails('d-accessdenied', 'user1');
+      expect(result1).toBeNull();
+      expect(mockDSDataClientSend).toHaveBeenCalledTimes(1);
+
+      // Second call should skip the API call due to cache
+      const result2 = await DirectoryService.getUserDetails('d-accessdenied', 'user2');
+      expect(result2).toBeNull();
+      // Should still be 1 call (no additional API call made)
+      expect(mockDSDataClientSend).toHaveBeenCalledTimes(1);
+      
+      // Verify the directory is marked as access denied
+      expect(DirectoryService.isDirectoryAccessDenied('d-accessdenied')).toBe(true);
+    });
   });
 
   describe('getUserGroups', () => {
@@ -358,6 +378,30 @@ describe('DirectoryService', () => {
       const history = db.prepare('SELECT * FROM sync_history ORDER BY id DESC LIMIT 1').all();
       expect(history).toHaveLength(1);
       expect(history[0].sync_type).toBe('directory');
+    });
+
+    test('should report access denied directories in sync result', async () => {
+      // Mock directory info returning active directory
+      mockDSClientSend.mockResolvedValue({
+        DirectoryDescriptions: [{
+          DirectoryId: 'd-test123',
+          Stage: 'Active'
+        }]
+      });
+
+      // Mock access denied for user details
+      const error = new Error('Access denied');
+      error.name = 'AccessDeniedException';
+      mockDSDataClientSend.mockRejectedValue(error);
+
+      const result = await DirectoryService.syncDirectoryUserData();
+      
+      expect(result.success).toBe(true);
+      expect(result.accessDeniedDirectories).toBeDefined();
+      expect(result.accessDeniedDirectories).toContain('d-test123');
+      expect(result.errors).toBeDefined();
+      expect(result.errors[0]).toContain('Access denied');
+      expect(result.errors[0]).toContain('Directory Data Access');
     });
   });
 

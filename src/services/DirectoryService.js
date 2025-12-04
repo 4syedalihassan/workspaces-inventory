@@ -32,6 +32,8 @@ class DirectoryService {
 
     // Cache for directory information
     this.directoryCache = new Map();
+    // Cache for directories with data access denied (avoids repeated failed API calls)
+    this.accessDeniedDirectories = new Set();
   }
 
   /**
@@ -73,12 +75,41 @@ class DirectoryService {
   }
 
   /**
+   * Check if a directory has Directory Data Access denied
+   * @param {string} directoryId - The directory ID
+   * @returns {boolean} True if access is denied
+   */
+  isDirectoryAccessDenied(directoryId) {
+    return this.accessDeniedDirectories.has(directoryId);
+  }
+
+  /**
+   * Get list of directories that have access denied
+   * @returns {Array<string>} Array of directory IDs with access denied
+   */
+  getAccessDeniedDirectories() {
+    return Array.from(this.accessDeniedDirectories);
+  }
+
+  /**
+   * Clear the access denied cache (useful for retrying after configuration changes)
+   */
+  clearAccessDeniedCache() {
+    this.accessDeniedDirectories.clear();
+  }
+
+  /**
    * Get user details from AWS Directory Service
    * @param {string} directoryId - The directory ID
    * @param {string} userName - The SAM account name (user name)
    * @returns {Promise<Object|null>} User details or null if not found
    */
   async getUserDetails(directoryId, userName) {
+    // Check if this directory has already been marked as access denied
+    if (this.accessDeniedDirectories.has(directoryId)) {
+      return null;
+    }
+
     try {
       const dataClient = this.createDataClient();
       const command = new DescribeUserCommand({
@@ -106,7 +137,9 @@ class DirectoryService {
       } else if (error.name === 'ResourceNotFoundException') {
         console.error(`User ${userName} not found in directory ${directoryId}`);
       } else if (error.name === 'AccessDeniedException') {
-        console.error(`Access denied when querying directory ${directoryId}. Ensure Directory Data Access is enabled.`);
+        console.error(`Access denied when querying directory ${directoryId}. Ensure Directory Data Access is enabled in the AWS Console for this directory.`);
+        // Mark this directory as access denied to avoid repeated failed API calls
+        this.accessDeniedDirectories.add(directoryId);
       } else {
         console.error(`Error fetching user details for ${userName} in ${directoryId}:`, error.message);
       }
@@ -121,6 +154,11 @@ class DirectoryService {
    * @returns {Promise<Array>} Array of group names
    */
   async getUserGroups(directoryId, userName) {
+    // Check if this directory has already been marked as access denied
+    if (this.accessDeniedDirectories.has(directoryId)) {
+      return [];
+    }
+
     try {
       const dataClient = this.createDataClient();
       const groups = [];
@@ -151,7 +189,18 @@ class DirectoryService {
 
       return groups;
     } catch (error) {
-      console.error(`Error fetching groups for ${userName} in ${directoryId}:`, error.message);
+      // Handle common errors gracefully
+      if (error.name === 'DirectoryUnavailableException') {
+        console.error(`Directory ${directoryId} is not available for data queries`);
+      } else if (error.name === 'ResourceNotFoundException') {
+        console.error(`User ${userName} not found in directory ${directoryId}`);
+      } else if (error.name === 'AccessDeniedException') {
+        console.error(`Access denied when querying directory ${directoryId}. Ensure Directory Data Access is enabled in the AWS Console for this directory.`);
+        // Mark this directory as access denied to avoid repeated failed API calls
+        this.accessDeniedDirectories.add(directoryId);
+      } else {
+        console.error(`Error fetching groups for ${userName} in ${directoryId}:`, error.message);
+      }
       return [];
     }
   }
@@ -166,6 +215,9 @@ class DirectoryService {
     let recordsProcessed = 0;
     let recordsUpdated = 0;
     let errors = [];
+
+    // Clear access denied cache at start of sync to retry any previously failed directories
+    this.accessDeniedDirectories.clear();
 
     try {
       // Get all workspaces with directory_id
@@ -184,6 +236,12 @@ class DirectoryService {
 
       // Process each directory
       for (const [directoryId, directoryWorkspaces] of workspacesByDirectory) {
+        // Skip if directory has already been marked as access denied
+        if (this.accessDeniedDirectories.has(directoryId)) {
+          errors.push(`Directory ${directoryId} - Access denied. Ensure Directory Data Access is enabled in the AWS Console.`);
+          continue;
+        }
+
         // Verify directory is available
         const dirInfo = await this.getDirectoryInfo(directoryId);
         if (!dirInfo) {
@@ -199,11 +257,23 @@ class DirectoryService {
 
         // Process each workspace user
         for (const ws of directoryWorkspaces) {
+          // Check again if directory became access denied during processing
+          if (this.accessDeniedDirectories.has(directoryId)) {
+            // Skip remaining workspaces in this directory, error already logged
+            break;
+          }
+
           recordsProcessed++;
 
           try {
             // Get user details from directory
             const userDetails = await this.getUserDetails(directoryId, ws.user_name);
+            
+            // Check if access was denied (directory added to set during API call)
+            if (this.accessDeniedDirectories.has(directoryId)) {
+              errors.push(`Directory ${directoryId} - Access denied. Ensure Directory Data Access is enabled in the AWS Console.`);
+              break;
+            }
             
             if (userDetails) {
               // Get user group memberships
@@ -250,6 +320,9 @@ class DirectoryService {
         success: true,
         recordsProcessed,
         recordsUpdated,
+        accessDeniedDirectories: this.accessDeniedDirectories.size > 0 
+          ? Array.from(this.accessDeniedDirectories) 
+          : undefined,
         errors: errors.length > 0 ? errors : undefined
       };
     } catch (error) {

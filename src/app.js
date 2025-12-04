@@ -70,7 +70,6 @@ app.get('/api/dashboard', (req, res) => {
   try {
     const Workspace = require('./models/Workspace');
     const WorkspaceUsage = require('./models/WorkspaceUsage');
-    const BillingData = require('./models/BillingData');
     const SyncHistory = require('./models/SyncHistory');
 
     const totalWorkspaces = Workspace.getCount({});

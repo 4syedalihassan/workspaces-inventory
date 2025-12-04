@@ -70,7 +70,9 @@ class WorkspacesService {
             running_mode_auto_stop_timeout_in_minutes: ws.WorkspaceProperties?.RunningModeAutoStopTimeoutInMinutes,
             root_volume_size_gib: ws.WorkspaceProperties?.RootVolumeSizeGib,
             user_volume_size_gib: ws.WorkspaceProperties?.UserVolumeSizeGib,
-            created_at: ws.WorkspaceProperties?.ComputeTypeName ? new Date().toISOString() : null,
+            // Note: AWS DescribeWorkspaces API doesn't provide creation timestamp
+            // created_at will be populated from CloudTrail CreateWorkspaces events
+            created_at: null,
             terminated_at: ws.State === 'TERMINATED' ? new Date().toISOString() : null,
             last_known_user_connection_timestamp: ws.LastKnownUserConnectionTimestamp?.toISOString(),
             tags: {}

@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 const cron = require('node-cron');
+const rateLimit = require('express-rate-limit');
 const config = require('./config');
 
 // Initialize database first
@@ -24,7 +25,17 @@ const BillingService = require('./services/BillingService');
 
 const app = express();
 
+// Rate limiting - 100 requests per minute per IP
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // Middleware
+app.use(limiter);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {

@@ -234,8 +234,13 @@ async function showWorkspaceDetails(id) {
             ` : ''}
         `;
         
-        const modal = new bootstrap.Modal(document.getElementById('workspaceModal'));
-        modal.show();
+        const modalElement = document.getElementById('workspaceModal');
+        if (window.bootstrap && window.bootstrap.Modal && modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        } else {
+            console.error('Cannot show modal: Bootstrap or modal element is missing.');
+        }
     } catch (error) {
         console.error('Error loading workspace details:', error);
     }

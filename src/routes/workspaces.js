@@ -29,7 +29,7 @@ router.get('/', (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching workspaces:', error);
-    res.status(500).json({ error: 'Failed to fetch workspaces' });
+    res.status(500).json({ error: 'Failed to fetch workspaces', details: error.message });
   }
 });
 

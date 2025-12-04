@@ -65,17 +65,19 @@ class Workspace {
   static upsert(workspace) {
     const stmt = db.prepare(`
       INSERT INTO workspaces (
-        id, directory_id, user_name, ip_address, state, bundle_id,
-        subnet_id, computer_name, running_mode, running_mode_auto_stop_timeout_in_minutes,
+        id, directory_id, user_name, user_display_name, ip_address, state, bundle_id,
+        compute_type, subnet_id, computer_name, running_mode, running_mode_auto_stop_timeout_in_minutes,
         root_volume_size_gib, user_volume_size_gib, created_at, terminated_at,
         last_known_user_connection_timestamp, tags, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(id) DO UPDATE SET
         directory_id = excluded.directory_id,
         user_name = excluded.user_name,
+        user_display_name = COALESCE(excluded.user_display_name, workspaces.user_display_name),
         ip_address = excluded.ip_address,
         state = excluded.state,
         bundle_id = excluded.bundle_id,
+        compute_type = COALESCE(excluded.compute_type, workspaces.compute_type),
         subnet_id = excluded.subnet_id,
         computer_name = excluded.computer_name,
         running_mode = excluded.running_mode,
@@ -93,9 +95,11 @@ class Workspace {
       workspace.id,
       workspace.directory_id,
       workspace.user_name,
+      workspace.user_display_name || null,
       workspace.ip_address,
       workspace.state,
       workspace.bundle_id,
+      workspace.compute_type || null,
       workspace.subnet_id,
       workspace.computer_name,
       workspace.running_mode,

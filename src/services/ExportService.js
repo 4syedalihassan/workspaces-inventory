@@ -16,7 +16,9 @@ class ExportService {
     worksheet.columns = [
       { header: 'Workspace ID', key: 'id', width: 25 },
       { header: 'User Name', key: 'user_name', width: 25 },
+      { header: 'Display Name', key: 'user_display_name', width: 30 },
       { header: 'State', key: 'state', width: 15 },
+      { header: 'Compute Type', key: 'compute_type', width: 15 },
       { header: 'Bundle ID', key: 'bundle_id', width: 25 },
       { header: 'Running Mode', key: 'running_mode', width: 15 },
       { header: 'Root Volume (GiB)', key: 'root_volume_size_gib', width: 18 },
@@ -152,7 +154,7 @@ class ExportService {
   workspacesToCSV(filters = {}) {
     const workspaces = Workspace.getAll(filters);
     const headers = [
-      'id', 'user_name', 'state', 'bundle_id', 'running_mode',
+      'id', 'user_name', 'user_display_name', 'state', 'compute_type', 'bundle_id', 'running_mode',
       'root_volume_size_gib', 'user_volume_size_gib', 'computer_name',
       'ip_address', 'created_at', 'terminated_at', 'last_known_user_connection_timestamp', 'tags'
     ];

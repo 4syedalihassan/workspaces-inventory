@@ -139,7 +139,7 @@ class CloudTrailService {
     }));
   }
 
-  // Get who created a workspace
+  // Get who created a workspace and extract user details
   getCreationInfo(workspaceId) {
     const events = CloudTrailEvent.getAll({
       workspace_id: workspaceId,
@@ -149,10 +149,27 @@ class CloudTrailService {
     if (events.length > 0) {
       const event = events[0];
       const userIdentity = JSON.parse(event.user_identity || '{}');
+      const requestParams = JSON.parse(event.request_parameters || '{}');
+      
+      // Extract user display name from request parameters if available
+      // The CreateWorkspaces API request contains Workspaces array with UserName and other details
+      let userDisplayName = null;
+      if (requestParams.Workspaces && requestParams.Workspaces.length > 0) {
+        const wsRequest = requestParams.Workspaces[0];
+        // In some cases, the display name might be in tags or additional properties
+        if (wsRequest.Tags) {
+          const nameTag = wsRequest.Tags.find(t => t.Key === 'Name' || t.Key === 'DisplayName' || t.Key === 'FullName');
+          if (nameTag) {
+            userDisplayName = nameTag.Value;
+          }
+        }
+      }
+      
       return {
         created_at: event.event_time,
         created_by: userIdentity.userName || userIdentity.arn || 'Unknown',
-        source_ip: event.source_ip_address
+        source_ip: event.source_ip_address,
+        user_display_name: userDisplayName
       };
     }
     return null;

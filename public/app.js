@@ -131,18 +131,14 @@ async function loadWorkspaces() {
             <tr>
                 <td><code>${ws.id}</code></td>
                 <td>${ws.user_name || '-'}</td>
+                <td>${ws.user_display_name || '-'}</td>
                 <td><span class="badge badge-${ws.state?.toLowerCase() || 'unknown'}">${ws.state || '-'}</span></td>
-                <td><small>${ws.bundle_id || '-'}</small></td>
+                <td>${ws.compute_type || '-'}</td>
                 <td>${ws.running_mode || '-'}</td>
                 <td>${ws.root_volume_size_gib || '-'} GiB</td>
                 <td>${ws.user_volume_size_gib || '-'} GiB</td>
                 <td>${ws.created_at ? new Date(ws.created_at).toLocaleDateString() : '-'}</td>
                 <td>${ws.last_known_user_connection_timestamp ? new Date(ws.last_known_user_connection_timestamp).toLocaleDateString() : '-'}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary" onclick="showWorkspaceDetails('${ws.id}')">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                </td>
             </tr>
         `).join('');
         

@@ -36,14 +36,52 @@ This application provides:
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+ (or Docker)
 - AWS credentials with permissions for:
   - `workspaces:DescribeWorkspaces`
   - `workspaces:DescribeWorkspaceBundles`
   - `cloudtrail:LookupEvents`
   - `ce:GetCostAndUsage`
 
-### Installation
+### Option 1: Docker (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/workspaces-inventory.git
+cd workspaces-inventory
+
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your AWS credentials
+
+# Build and run with Docker Compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the application
+docker-compose down
+```
+
+Or build and run manually:
+
+```bash
+# Build the Docker image
+docker build -t workspaces-inventory .
+
+# Run the container
+docker run -d \
+  --name workspaces-inventory \
+  -p 3000:3000 \
+  -e AWS_REGION=us-east-1 \
+  -e AWS_ACCESS_KEY_ID=your_key \
+  -e AWS_SECRET_ACCESS_KEY=your_secret \
+  -v workspaces-data:/app/data \
+  workspaces-inventory
+```
+
+### Option 2: Node.js Installation
 
 ```bash
 # Clone the repository

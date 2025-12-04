@@ -55,12 +55,15 @@ class CloudTrailService {
         return responseElements.PendingRequests[0].WorkspaceId;
       }
     } catch (e) {
-      // Ignore parsing errors
+      console.error('Error parsing CloudTrail event', event.event_id, e.message);
     }
     return null;
   }
 
   async syncCloudTrailEvents(daysBack = 7) {
+    // Validate daysBack parameter to prevent unexpected behavior
+    daysBack = Math.max(1, Math.min(daysBack, 90));
+    
     const syncRecord = SyncHistory.create('cloudtrail');
     let recordsProcessed = 0;
 

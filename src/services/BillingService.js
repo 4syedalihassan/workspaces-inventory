@@ -21,6 +21,9 @@ class BillingService {
   }
 
   async syncBillingData(monthsBack = 3) {
+    // Validate monthsBack parameter to prevent excessive API costs
+    monthsBack = Math.max(1, Math.min(monthsBack, 12));
+    
     const syncRecord = SyncHistory.create('billing');
     let recordsProcessed = 0;
 

@@ -30,7 +30,6 @@ class ExportService {
     ];
 
     // Style header row
-    worksheet.getRow(1).font = { bold: true };
     worksheet.getRow(1).fill = {
       type: 'pattern',
       pattern: 'solid',
@@ -164,8 +163,8 @@ class ExportService {
         let value = ws[h];
         if (value === null || value === undefined) return '';
         if (typeof value === 'object') value = JSON.stringify(value);
-        // Escape commas and quotes
-        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+        // Escape commas, quotes, and newlines
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
           value = `"${value.replace(/"/g, '""')}"`;
         }
         return value;

@@ -21,9 +21,11 @@ db.exec(`
     id TEXT PRIMARY KEY,
     directory_id TEXT,
     user_name TEXT NOT NULL,
+    user_display_name TEXT,
     ip_address TEXT,
     state TEXT,
     bundle_id TEXT,
+    compute_type TEXT,
     subnet_id TEXT,
     computer_name TEXT,
     running_mode TEXT,
@@ -36,6 +38,9 @@ db.exec(`
     tags TEXT, -- JSON string
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- Add new columns if they don't exist (for migration)
+  -- SQLite doesn't have IF NOT EXISTS for ALTER TABLE, so we handle this in code
 
   -- WorkSpaces usage table (monthly usage hours)
   CREATE TABLE IF NOT EXISTS workspace_usage (
@@ -104,5 +109,31 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_billing_start_date ON billing_data(start_date);
   CREATE INDEX IF NOT EXISTS idx_billing_workspace_id ON billing_data(workspace_id);
 `);
+
+// Migration: Add new columns to existing tables
+// Check if columns exist and add them if they don't
+const columns = db.pragma('table_info(workspaces)').map(col => col.name);
+
+if (!columns.includes('user_display_name')) {
+  try {
+    db.exec('ALTER TABLE workspaces ADD COLUMN user_display_name TEXT');
+  } catch (e) {
+    // Log error if it's not about duplicate column
+    if (!e.message.includes('duplicate column')) {
+      console.error('Migration error adding user_display_name column:', e.message);
+    }
+  }
+}
+
+if (!columns.includes('compute_type')) {
+  try {
+    db.exec('ALTER TABLE workspaces ADD COLUMN compute_type TEXT');
+  } catch (e) {
+    // Log error if it's not about duplicate column
+    if (!e.message.includes('duplicate column')) {
+      console.error('Migration error adding compute_type column:', e.message);
+    }
+  }
+}
 
 module.exports = db;

@@ -11,9 +11,11 @@ jest.mock('../src/models/database', () => {
       id TEXT PRIMARY KEY,
       directory_id TEXT,
       user_name TEXT NOT NULL,
+      user_display_name TEXT,
       ip_address TEXT,
       state TEXT,
       bundle_id TEXT,
+      compute_type TEXT,
       subnet_id TEXT,
       computer_name TEXT,
       running_mode TEXT,
@@ -110,9 +112,11 @@ describe('API Tests', () => {
       id: 'ws-test001',
       directory_id: 'd-test',
       user_name: 'testuser1',
+      user_display_name: 'Test User One',
       ip_address: '10.0.0.1',
       state: 'AVAILABLE',
       bundle_id: 'wsb-test',
+      compute_type: 'STANDARD',
       subnet_id: 'subnet-test',
       computer_name: 'AMAZON-TEST1',
       running_mode: 'AUTO_STOP',
@@ -129,9 +133,11 @@ describe('API Tests', () => {
       id: 'ws-test002',
       directory_id: 'd-test',
       user_name: 'testuser2',
+      user_display_name: 'Test User Two',
       ip_address: '10.0.0.2',
       state: 'STOPPED',
       bundle_id: 'wsb-test2',
+      compute_type: 'PERFORMANCE',
       subnet_id: 'subnet-test',
       computer_name: 'AMAZON-TEST2',
       running_mode: 'ALWAYS_ON',
@@ -314,13 +320,16 @@ describe('API Tests', () => {
   });
 
   describe('Export API', () => {
-    test('GET /api/export/workspaces/csv should return CSV', async () => {
+    test('GET /api/export/workspaces/csv should return CSV with new columns', async () => {
       const response = await request(app).get('/api/export/workspaces/csv');
       
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toContain('text/csv');
-      expect(response.text).toContain('id,user_name');
+      expect(response.text).toContain('id,user_name,user_display_name');
+      expect(response.text).toContain('compute_type');
       expect(response.text).toContain('ws-test001');
+      expect(response.text).toContain('Test User One');
+      expect(response.text).toContain('STANDARD');
     });
 
     test('GET /api/export/workspaces/excel should return Excel file', async () => {

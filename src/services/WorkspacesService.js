@@ -56,14 +56,21 @@ class WorkspacesService {
         const response = await this.client.send(command);
 
         for (const ws of response.Workspaces || []) {
+          // Get bundle info to extract compute type
+          const bundleInfo = await this.getBundleInfo(ws.BundleId);
+          
           // Transform AWS WorkSpace to our model
           const workspace = {
             id: ws.WorkspaceId,
             directory_id: ws.DirectoryId,
             user_name: ws.UserName,
+            // user_display_name is populated from CloudTrail CreateWorkspaces event
+            user_display_name: null,
             ip_address: ws.IpAddress,
             state: ws.State,
             bundle_id: ws.BundleId,
+            // Get compute type from bundle info
+            compute_type: bundleInfo?.ComputeType?.Name || null,
             subnet_id: ws.SubnetId,
             computer_name: ws.ComputerName,
             running_mode: ws.WorkspaceProperties?.RunningMode,

@@ -233,6 +233,33 @@ describe('DirectoryService', () => {
       // Verify the directory is marked as access denied
       expect(DirectoryService.isDirectoryAccessDenied('d-accessdenied')).toBe(true);
     });
+
+    test('should return list of access denied directories', async () => {
+      const error = new Error('Access denied');
+      error.name = 'AccessDeniedException';
+      mockDSDataClientSend.mockRejectedValue(error);
+
+      await DirectoryService.getUserDetails('d-denied1', 'user1');
+      await DirectoryService.getUserDetails('d-denied2', 'user2');
+
+      const deniedDirs = DirectoryService.getAccessDeniedDirectories();
+      expect(deniedDirs).toHaveLength(2);
+      expect(deniedDirs).toContain('d-denied1');
+      expect(deniedDirs).toContain('d-denied2');
+    });
+
+    test('should clear access denied cache', async () => {
+      const error = new Error('Access denied');
+      error.name = 'AccessDeniedException';
+      mockDSDataClientSend.mockRejectedValue(error);
+
+      await DirectoryService.getUserDetails('d-denied1', 'user1');
+      expect(DirectoryService.isDirectoryAccessDenied('d-denied1')).toBe(true);
+
+      DirectoryService.clearAccessDeniedCache();
+      expect(DirectoryService.isDirectoryAccessDenied('d-denied1')).toBe(false);
+      expect(DirectoryService.getAccessDeniedDirectories()).toHaveLength(0);
+    });
   });
 
   describe('getUserGroups', () => {

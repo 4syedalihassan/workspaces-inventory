@@ -236,12 +236,6 @@ class DirectoryService {
 
       // Process each directory
       for (const [directoryId, directoryWorkspaces] of workspacesByDirectory) {
-        // Skip if directory has already been marked as access denied
-        if (this.accessDeniedDirectories.has(directoryId)) {
-          errors.push(`Directory ${directoryId} - Access denied. Ensure Directory Data Access is enabled in the AWS Console.`);
-          continue;
-        }
-
         // Verify directory is available
         const dirInfo = await this.getDirectoryInfo(directoryId);
         if (!dirInfo) {

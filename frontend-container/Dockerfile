@@ -11,7 +11,7 @@ COPY nginx.conf /etc/nginx/conf.d/
 
 # Copy static assets (HTML, CSS, JS)
 # Assumes frontend is already built
-COPY ../public /usr/share/nginx/html
+COPY public /usr/share/nginx/html
 
 # Expose port 80
 EXPOSE 80

@@ -28,18 +28,32 @@ class ReportResponse(BaseModel):
 
 
 def generate_report_task(report_id: int, db: Session):
-    """Background task to generate report."""
-    # This would be handled by Celery in production
-    # For now, just mark as completed
+    """
+    Background task to generate report.
+    
+    TODO: In production, this should be moved to a proper Celery task
+    for better async handling and monitoring. This is a simplified
+    implementation for demonstration purposes.
+    
+    Production implementation would use:
+    - Celery @task decorator
+    - Proper error handling and retry logic
+    - Progress tracking
+    - Result storage in S3 or similar
+    """
     report = db.query(Report).filter(Report.id == report_id).first()
     if report:
         report.status = "processing"
         db.commit()
         
-        # TODO: Implement actual report generation with Celery
-        # For now, just simulate completion
+        # Placeholder for actual report generation
+        # In production, this would:
+        # 1. Query database for relevant data
+        # 2. Generate CSV/Excel file
+        # 3. Store in reports directory or S3
+        # 4. Update report status and file_path
         import time
-        time.sleep(2)
+        time.sleep(2)  # Simulates report generation time
         
         report.status = "completed"
         report.file_path = f"/reports/{report_id}.{report.format}"

@@ -12,6 +12,14 @@ This document outlines what needs to be completed before deploying to production
 ✅ **Docker**: All services containerized
 ✅ **Documentation**: Comprehensive guides created
 ✅ **Security**: Network isolation and security headers configured
+✅ **Vulnerabilities Fixed**: FastAPI 0.109.1, python-multipart 0.0.18 (ReDoS patches)
+
+## Recent Security Updates
+
+**December 6, 2024**: Fixed critical vulnerabilities
+- ✅ Updated FastAPI from 0.109.0 to 0.109.1 (fixes Content-Type Header ReDoS)
+- ✅ Updated python-multipart from 0.0.6 to 0.0.18 (fixes DoS and ReDoS vulnerabilities)
+- ✅ All dependencies now use patched versions
 
 ## Production TODOs
 

@@ -12,8 +12,8 @@ RUN apk add --no-cache git
 # Copy source code first
 COPY . .
 
-# Download dependencies (generates go.sum)
-RUN go mod download
+# Add missing dependencies and generate go.sum
+RUN go mod tidy
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .

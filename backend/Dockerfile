@@ -32,12 +32,14 @@ RUN apk add --no-cache \
     tzdata \
     bash
 
-# Create necessary directories
+# Create necessary directories and users
 RUN mkdir -p /var/lib/postgresql/data \
     /var/log/postgresql \
     /var/log/redis \
     /var/log/supervisor \
-    /app
+    /var/lib/redis \
+    /app && \
+    chown -R redis:redis /var/log/redis /var/lib/redis
 
 # Initialize PostgreSQL
 RUN mkdir -p /run/postgresql && \

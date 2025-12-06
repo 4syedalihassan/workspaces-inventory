@@ -7,7 +7,7 @@ FROM nginx:alpine
 RUN rm /etc/nginx/conf.d/default.conf
 
 # Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/
+COPY frontend-container/nginx.conf /etc/nginx/conf.d/
 
 # Copy static assets (HTML, CSS, JS)
 # Assumes frontend is already built

@@ -1,10 +1,20 @@
 # Dependencies
 node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
 
 # Database
 *.db
 *.sqlite
 data/
+postgres-data/
+redis-data/
 
 # Environment
 .env
@@ -29,10 +39,26 @@ Thumbs.db
 # Build output
 dist/
 build/
+*.egg-info/
 
 # Coverage
 coverage/
+htmlcov/
+.coverage
+.pytest_cache/
 
 # Temp files
 tmp/
 temp/
+reports-data/
+
+# Docker
+*.tar
+
+# AI models
+*.gguf
+*.bin
+models/
+
+# Alembic
+alembic/versions/*.pyc

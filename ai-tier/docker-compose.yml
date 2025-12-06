@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  phi3-service:
+    build:
+      context: ./phi3-service
+      dockerfile: Dockerfile
+    container_name: workspaces-phi3
+    ports:
+      - "11434:11434"
+    networks:
+      - ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:11434/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # Resource limits for AI service
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+networks:
+  ai-network:
+    driver: bridge

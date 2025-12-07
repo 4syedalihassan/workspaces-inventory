@@ -1,5 +1,8 @@
-// API Base URL
-const API_BASE = '/api';
+// API Base URL - Updated for Go backend
+const API_BASE = '/api/v1';
+
+// Authentication token
+let authToken = localStorage.getItem('authToken') || null;
 
 // Current active tab
 let currentTab = 'dashboard';

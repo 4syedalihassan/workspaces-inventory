@@ -62,9 +62,10 @@ COPY --from=go-builder /app/main /app/main
 # Copy supervisord configuration
 COPY supervisord.conf /etc/supervisord.conf
 
-# Copy initialization script
+# Copy initialization scripts
 COPY init-db.sh /docker-entrypoint-initdb.d/init-db.sh
-RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh
+COPY start-postgres.sh /usr/local/bin/start-postgres.sh
+RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh /usr/local/bin/start-postgres.sh
 
 EXPOSE 8080
 

@@ -39,9 +39,8 @@ RUN wget -q --show-progress \
 # Build Go HTTP server
 FROM golang:1.21-alpine AS go-builder
 WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY main.go .
+COPY . .
+RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ai-server .
 
 # Final stage

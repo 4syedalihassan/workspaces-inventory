@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 # Start PostgreSQL in the background
@@ -7,7 +7,7 @@ POSTGRES_PID=$!
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL to start..."
-for i in {1..30}; do
+for i in $(seq 1 30); do
   if pg_isready -h localhost -p 5432 -U postgres > /dev/null 2>&1; then
     echo "PostgreSQL is ready!"
     break

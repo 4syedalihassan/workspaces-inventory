@@ -31,11 +31,12 @@ RUN git clone https://github.com/ggerganov/llama.cpp.git && \
 RUN mkdir -p /models
 
 # Download Phi-3 model (4-bit quantized)
-# Note: This is a large file (~2.3GB), consider downloading separately for faster builds
+# This is a large file (~2.3GB)
 WORKDIR /models
-RUN wget -q --show-progress \
+RUN wget --progress=bar:force:noscroll \
     https://huggingface.co/microsoft/Phi-3-mini-128k-instruct-gguf/resolve/main/Phi-3-mini-128k-instruct-Q4_K_M.gguf \
-    || echo "Warning: Model download failed. Please download manually."
+    -O Phi-3-mini-128k-instruct-Q4_K_M.gguf && \
+    ls -lh Phi-3-mini-128k-instruct-Q4_K_M.gguf
 
 # Build Go HTTP server
 FROM golang:1.21-alpine AS go-builder

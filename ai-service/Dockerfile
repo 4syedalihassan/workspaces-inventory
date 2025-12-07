@@ -37,11 +37,12 @@ COPY . .
 RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ai-server .
 
-# Final stage
+# Final stage - Runtime environment
 FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y \
     libgomp1 \
     ca-certificates \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy llama.cpp binaries

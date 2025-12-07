@@ -62,6 +62,7 @@ func main() {
 	// Routes
 	r.POST("/query", queryHandler)
 	r.GET("/health", healthHandler)
+	r.HEAD("/health", healthHandler) // Support HEAD for healthcheck
 	r.GET("/info", infoHandler)
 
 	// Start server

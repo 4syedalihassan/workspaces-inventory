@@ -28,6 +28,16 @@ RUN git clone https://github.com/ggerganov/llama.cpp.git && \
         -DCMAKE_BUILD_TYPE=Release && \
     cmake --build build --config Release -j$(nproc)
 
+# Download Phi-3 model (4-bit quantized, ~2.3GB)
+RUN mkdir -p /models && \
+    cd /models && \
+    echo "Downloading Phi-3 model (2.3GB)..." && \
+    wget --progress=bar:force:noscroll \
+    "https://huggingface.co/cleatherbury/Phi-3-mini-128k-instruct-Q4_K_M-GGUF/resolve/main/phi-3-mini-128k-instruct.Q4_K_M.gguf" \
+    -O phi-3-mini-128k-instruct.Q4_K_M.gguf && \
+    echo "Download complete!" && \
+    ls -lh phi-3-mini-128k-instruct.Q4_K_M.gguf
+
 # Build Go HTTP server
 FROM golang:1.21-alpine AS go-builder
 WORKDIR /app
@@ -46,8 +56,8 @@ RUN apt-get update && apt-get install -y \
 # Copy llama.cpp binaries
 COPY --from=0 /build/llama.cpp/build/bin /usr/local/bin/
 
-# Create models directory for volume mount
-RUN mkdir -p /models
+# Copy Phi-3 model from build stage
+COPY --from=0 /models /models
 
 # Copy Go server
 COPY --from=go-builder /app/ai-server /app/ai-server
@@ -60,4 +70,4 @@ EXPOSE 8081
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8081/health || exit 1
 
-CMD ["/app/ai-server", "--model", "/models/Phi-3-mini-128k-instruct-Q4_K_M.gguf", "--port", "8081", "--threads", "4", "--llama-binary", "/usr/local/bin/llama-cli"]
+CMD ["/app/ai-server", "--model", "/models/phi-3-mini-128k-instruct.Q4_K_M.gguf", "--port", "8081", "--threads", "4", "--llama-binary", "/usr/local/bin/llama-cli"]

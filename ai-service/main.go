@@ -37,7 +37,7 @@ var (
 
 func main() {
 	port := flag.Int("port", 8081, "Server port")
-	flag.StringVar(&modelPath, "model", "/models/Phi-3-mini-128k-instruct-Q4_K_M.gguf", "Path to GGUF model")
+	flag.StringVar(&modelPath, "model", "/models/phi-3-mini-128k-instruct.Q4_K_M.gguf", "Path to GGUF model")
 	flag.IntVar(&threads, "threads", 4, "Number of threads for inference")
 	flag.IntVar(&contextSize, "context", 8192, "Context size")
 	flag.StringVar(&llamaCppBinary, "llama-binary", "/usr/local/bin/llama-cli", "Path to llama.cpp binary")

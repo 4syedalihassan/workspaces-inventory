@@ -69,4 +69,4 @@ EXPOSE 8081
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8081/health || exit 1
 
-CMD ["/app/ai-server", "--model", "/models/Phi-3-mini-128k-instruct-Q4_K_M.gguf", "--port", "8081", "--threads", "4"]
+CMD ["/app/ai-server", "--model", "/models/Phi-3-mini-128k-instruct-Q4_K_M.gguf", "--port", "8081", "--threads", "4", "--llama-binary", "/usr/local/bin/llama-cli"]

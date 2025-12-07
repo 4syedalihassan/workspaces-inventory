@@ -32,7 +32,7 @@ var (
 	modelPath      string
 	threads        int
 	contextSize    int
-	llamaCppBinary string
+	llamaCppBinary string = "/usr/local/bin/llama-cli" // Updated to correct binary name
 )
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 	flag.StringVar(&modelPath, "model", "/models/Phi-3-mini-128k-instruct-Q4_K_M.gguf", "Path to GGUF model")
 	flag.IntVar(&threads, "threads", 4, "Number of threads for inference")
 	flag.IntVar(&contextSize, "context", 8192, "Context size")
-	flag.StringVar(&llamaCppBinary, "llama-binary", "/usr/local/bin/main", "Path to llama.cpp binary")
+	flag.StringVar(&llamaCppBinary, "llama-binary", "/usr/local/bin/llama-cli", "Path to llama.cpp binary")
 	flag.Parse()
 
 	// Verify model exists

@@ -34,12 +34,13 @@ RUN mkdir -p /models
 # This is a large file (~2.3GB) - will take several minutes
 WORKDIR /models
 RUN echo "Starting model download (2.3GB)..." && \
-    curl -L --fail --progress-bar --max-time 1800 \
-    "https://huggingface.co/microsoft/Phi-3-mini-128k-instruct-gguf/resolve/main/Phi-3-mini-128k-instruct-Q4_K_M.gguf?download=true" \
+    curl -L --progress-bar --max-time 1800 \
+    -H "Authorization: Bearer hf_anonymous" \
+    "https://huggingface.co/microsoft/Phi-3-mini-128k-instruct-gguf/resolve/main/Phi-3-mini-128k-instruct-Q4_K_M.gguf" \
     -o Phi-3-mini-128k-instruct-Q4_K_M.gguf && \
     echo "Download complete!" && \
     ls -lh Phi-3-mini-128k-instruct-Q4_K_M.gguf && \
-    test -f Phi-3-mini-128k-instruct-Q4_K_M.gguf || (echo "ERROR: Model file not created!" && exit 1)
+    [ -s Phi-3-mini-128k-instruct-Q4_K_M.gguf ] || (echo "ERROR: Model file is empty or not created!" && exit 1)
 
 # Build Go HTTP server
 FROM golang:1.21-alpine AS go-builder

@@ -1,4 +1,5 @@
-# Container 3: AI Service (llama.cpp + Phi-3 + Go HTTP Server)
+# Container 3: AI Service with llama.cpp and Phi-3
+# Model file will be mounted as volume at runtime
 
 FROM ubuntu:22.04
 
@@ -26,9 +27,6 @@ RUN git clone https://github.com/ggerganov/llama.cpp.git && \
         -DLLAMA_FMA=ON \
         -DCMAKE_BUILD_TYPE=Release && \
     cmake --build build --config Release -j$(nproc)
-
-# Create models directory (model will be mounted as volume at runtime)
-RUN mkdir -p /models
 
 # Build Go HTTP server
 FROM golang:1.21-alpine AS go-builder

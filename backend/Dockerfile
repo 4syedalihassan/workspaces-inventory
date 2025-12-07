@@ -64,8 +64,8 @@ COPY supervisord.conf /etc/supervisord.conf
 
 # Copy initialization scripts
 COPY init-db.sh /docker-entrypoint-initdb.d/init-db.sh
-COPY start-postgres.sh /usr/local/bin/start-postgres.sh
-RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh /usr/local/bin/start-postgres.sh
+COPY init-database.sh /usr/local/bin/init-database.sh
+RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh /usr/local/bin/init-database.sh
 
 EXPOSE 8080
 

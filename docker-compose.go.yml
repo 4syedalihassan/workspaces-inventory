@@ -57,9 +57,7 @@ services:
       - THREADS=4
       - CONTEXT_SIZE=8192
     volumes:
-      # Mount the ai-service directory to access the downloaded model file
-      # Make sure Phi-3-mini-128k-instruct-Q4_K_M.gguf is in ./ai-service/ directory
-      - ./ai-service:/models:ro
+      - "./ai-service:/models:ro"
     networks:
       - workspaces-network
     restart: unless-stopped

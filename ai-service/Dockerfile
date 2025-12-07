@@ -31,12 +31,15 @@ RUN git clone https://github.com/ggerganov/llama.cpp.git && \
 RUN mkdir -p /models
 
 # Download Phi-3 model (4-bit quantized)
-# This is a large file (~2.3GB)
+# This is a large file (~2.3GB) - will take several minutes
 WORKDIR /models
-RUN curl -L --progress-bar \
+RUN echo "Starting model download (2.3GB)..." && \
+    curl -L --fail --progress-bar --max-time 1800 \
     "https://huggingface.co/microsoft/Phi-3-mini-128k-instruct-gguf/resolve/main/Phi-3-mini-128k-instruct-Q4_K_M.gguf?download=true" \
     -o Phi-3-mini-128k-instruct-Q4_K_M.gguf && \
-    ls -lh Phi-3-mini-128k-instruct-Q4_K_M.gguf
+    echo "Download complete!" && \
+    ls -lh Phi-3-mini-128k-instruct-Q4_K_M.gguf && \
+    test -f Phi-3-mini-128k-instruct-Q4_K_M.gguf || (echo "ERROR: Model file not created!" && exit 1)
 
 # Build Go HTTP server
 FROM golang:1.21-alpine AS go-builder
@@ -57,6 +60,11 @@ COPY --from=0 /build/llama.cpp/build/bin /usr/local/bin/
 
 # Copy model
 COPY --from=0 /models /models
+
+# Verify model was copied
+RUN ls -lh /models/ && \
+    test -f /models/Phi-3-mini-128k-instruct-Q4_K_M.gguf || \
+    (echo "ERROR: Model file not found in final stage!" && exit 1)
 
 # Copy Go server
 COPY --from=go-builder /app/ai-server /app/ai-server

@@ -33,9 +33,9 @@ RUN mkdir -p /models
 # Download Phi-3 model (4-bit quantized)
 # This is a large file (~2.3GB)
 WORKDIR /models
-RUN wget --progress=bar:force:noscroll \
-    https://huggingface.co/microsoft/Phi-3-mini-128k-instruct-gguf/resolve/main/Phi-3-mini-128k-instruct-Q4_K_M.gguf?download=true \
-    -O Phi-3-mini-128k-instruct-Q4_K_M.gguf && \
+RUN curl -L --progress-bar \
+    "https://huggingface.co/microsoft/Phi-3-mini-128k-instruct-gguf/resolve/main/Phi-3-mini-128k-instruct-Q4_K_M.gguf?download=true" \
+    -o Phi-3-mini-128k-instruct-Q4_K_M.gguf && \
     ls -lh Phi-3-mini-128k-instruct-Q4_K_M.gguf
 
 # Build Go HTTP server

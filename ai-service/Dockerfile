@@ -27,20 +27,17 @@ RUN git clone https://github.com/ggerganov/llama.cpp.git && \
         -DCMAKE_BUILD_TYPE=Release && \
     cmake --build build --config Release -j$(nproc)
 
-# Create models directory
+# Create models directory and copy pre-downloaded model
 RUN mkdir -p /models
-
-# Download Phi-3 model (4-bit quantized)
-# This is a large file (~2.3GB) - will take several minutes
 WORKDIR /models
-RUN echo "Starting model download (2.3GB)..." && \
-    curl -L --progress-bar --max-time 1800 \
-    -H "Authorization: Bearer hf_anonymous" \
-    "https://huggingface.co/microsoft/Phi-3-mini-128k-instruct-gguf/resolve/main/Phi-3-mini-128k-instruct-Q4_K_M.gguf" \
-    -o Phi-3-mini-128k-instruct-Q4_K_M.gguf && \
-    echo "Download complete!" && \
-    ls -lh Phi-3-mini-128k-instruct-Q4_K_M.gguf && \
-    [ -s Phi-3-mini-128k-instruct-Q4_K_M.gguf ] || (echo "ERROR: Model file is empty or not created!" && exit 1)
+
+# Copy Phi-3 model from local build context (2.3GB)
+# Make sure Phi-3-mini-128k-instruct-Q4_K_M.gguf is in ai-service/ directory
+COPY Phi-3-mini-128k-instruct-Q4_K_M.gguf /models/Phi-3-mini-128k-instruct-Q4_K_M.gguf
+
+# Verify model file
+RUN ls -lh Phi-3-mini-128k-instruct-Q4_K_M.gguf && \
+    [ -s Phi-3-mini-128k-instruct-Q4_K_M.gguf ] || (echo "ERROR: Model file is empty or not found!" && exit 1)
 
 # Build Go HTTP server
 FROM golang:1.21-alpine AS go-builder

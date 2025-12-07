@@ -9,12 +9,11 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache git
 
-# Copy go mod files
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy source code
+# Copy source code first
 COPY . .
+
+# Add missing dependencies and generate go.sum
+RUN go mod tidy
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
@@ -33,12 +32,14 @@ RUN apk add --no-cache \
     tzdata \
     bash
 
-# Create necessary directories
+# Create necessary directories and users
 RUN mkdir -p /var/lib/postgresql/data \
     /var/log/postgresql \
     /var/log/redis \
     /var/log/supervisor \
-    /app
+    /var/lib/redis \
+    /app && \
+    chown -R redis:redis /var/log/redis /var/lib/redis
 
 # Initialize PostgreSQL
 RUN mkdir -p /run/postgresql && \
@@ -61,9 +62,10 @@ COPY --from=go-builder /app/main /app/main
 # Copy supervisord configuration
 COPY supervisord.conf /etc/supervisord.conf
 
-# Copy initialization script
+# Copy initialization scripts
 COPY init-db.sh /docker-entrypoint-initdb.d/init-db.sh
-RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh
+COPY init-database.sh /usr/local/bin/init-database.sh
+RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh /usr/local/bin/init-database.sh
 
 EXPOSE 8080
 

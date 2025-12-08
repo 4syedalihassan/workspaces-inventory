@@ -264,7 +264,6 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 
 // TestAWSConnection tests AWS credentials
 func (h *AdminHandler) TestAWSConnection(c *gin.Context) {
-	// Import services package at top of file
 	awsService := &services.AWSService{DB: h.DB}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)

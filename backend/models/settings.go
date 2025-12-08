@@ -196,7 +196,8 @@ func decrypt(ciphertext string) (string, error) {
 		return "", errors.New("ciphertext too short")
 	}
 
-	nonce, ciphertextBytes := data[:nonceSize], data[nonceSize:]
+	nonce := data[:nonceSize]
+	ciphertextBytes := data[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, ciphertextBytes, nil)
 	if err != nil {
 		return "", err

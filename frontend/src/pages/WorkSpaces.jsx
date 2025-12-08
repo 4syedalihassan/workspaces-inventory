@@ -16,7 +16,7 @@ function WorkSpaces() {
   useEffect(() => {
     loadFilterOptions();
     loadWorkspaces();
-  }, []);
+  }, [filters, pagination.limit]);
 
   const loadFilterOptions = async () => {
     try {

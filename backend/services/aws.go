@@ -91,8 +91,15 @@ func (s *AWSService) SyncWorkSpaces(ctx context.Context) (int, error) {
 func (s *AWSService) upsertWorkspace(ws wstypes.Workspace) error {
 	var createdAt, terminatedAt, lastConnection *time.Time
 
-	if ws.WorkspaceProperties != nil && ws.WorkspaceProperties.RunningMode != nil {
-		// Handle time conversions
+	// Handle time conversions for workspace timestamps
+	if ws.CreationTime != nil {
+		createdAt = ws.CreationTime
+	}
+	if ws.TerminationTime != nil {
+		terminatedAt = ws.TerminationTime
+	}
+	if ws.LastKnownUserConnectionTimestamp != nil {
+		lastConnection = ws.LastKnownUserConnectionTimestamp
 	}
 
 	// Convert bundle properties

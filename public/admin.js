@@ -212,9 +212,21 @@ async function deleteUser(userId, username) {
 // Integration Settings
 async function loadIntegrationSettings() {
     try {
-        const response = await apiFetch(`${API_BASE}/admin/settings?category=aws`);
-        const data = await response.json();
+        // Fetch all settings concurrently using Promise.all()
+        const [awsResponse, duoResponse, syncResponse] = await Promise.all([
+            apiFetch(`${API_BASE}/admin/settings?category=aws`),
+            apiFetch(`${API_BASE}/admin/settings?category=duo`),
+            apiFetch(`${API_BASE}/admin/settings?category=sync`)
+        ]);
 
+        // Parse all responses
+        const [data, duoData, syncData] = await Promise.all([
+            awsResponse.json(),
+            duoResponse.json(),
+            syncResponse.json()
+        ]);
+
+        // Load AWS settings
         if (data.settings) {
             data.settings.forEach(s => {
                 const id = s.key.replace('aws.', 'aws-').replace('_', '-');
@@ -224,9 +236,6 @@ async function loadIntegrationSettings() {
         }
 
         // Load DUO settings
-        const duoResponse = await apiFetch(`${API_BASE}/admin/settings?category=duo`);
-        const duoData = await duoResponse.json();
-
         if (duoData.settings) {
             duoData.settings.forEach(s => {
                 const id = s.key.replace('duo.', 'duo-').replace('_', '-');
@@ -236,9 +245,6 @@ async function loadIntegrationSettings() {
         }
 
         // Load sync settings
-        const syncResponse = await apiFetch(`${API_BASE}/admin/settings?category=sync`);
-        const syncData = await syncResponse.json();
-
         if (syncData.settings) {
             syncData.settings.forEach(s => {
                 if (s.key === 'sync.auto_sync_enabled') {

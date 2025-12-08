@@ -209,6 +209,13 @@ async function deleteUser(userId, username) {
     }
 }
 
+// Helper function to convert setting keys to element IDs
+function settingKeyToElementId(key, categoryPrefix) {
+    // Replace category prefix (e.g., 'aws.' -> 'aws-', 'duo.' -> 'duo-')
+    // then replace first underscore with hyphen
+    return key.replace(categoryPrefix + '.', categoryPrefix + '-').replace('_', '-');
+}
+
 // Integration Settings
 async function loadIntegrationSettings() {
     try {
@@ -229,7 +236,7 @@ async function loadIntegrationSettings() {
         // Load AWS settings
         if (data.settings) {
             data.settings.forEach(s => {
-                const id = s.key.replace('aws.', 'aws-').replace('_', '-');
+                const id = settingKeyToElementId(s.key, 'aws');
                 const el = document.getElementById(id);
                 if (el) el.value = s.value || '';
             });
@@ -238,7 +245,7 @@ async function loadIntegrationSettings() {
         // Load DUO settings
         if (duoData.settings) {
             duoData.settings.forEach(s => {
-                const id = s.key.replace('duo.', 'duo-').replace('_', '-');
+                const id = settingKeyToElementId(s.key, 'duo');
                 const el = document.getElementById(id);
                 if (el) el.value = s.value || '';
             });

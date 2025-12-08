@@ -1,20 +1,39 @@
 import { NavLink } from 'react-router-dom';
 import { triggerSync } from '../api';
 import { useState } from 'react';
-import { toast } from 'react-toastify';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  CircularProgress,
+  Snackbar,
+  Alert
+} from '@mui/material';
+import {
+  Dashboard as DashboardIcon,
+  Computer as ComputerIcon,
+  QueryStats as QueryStatsIcon,
+  AttachMoney as AttachMoneyIcon,
+  History as HistoryIcon,
+  Settings as SettingsIcon,
+  Sync as SyncIcon
+} from '@mui/icons-material';
 
 function Navbar({ lastSync, setLastSync }) {
   const [syncing, setSyncing] = useState(false);
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
   const handleSync = async () => {
     setSyncing(true);
     try {
       await triggerSync('all');
       setLastSync(new Date().toISOString());
-      toast.success('Sync triggered successfully');
+      setNotification({ open: true, message: 'Sync triggered successfully', severity: 'success' });
     } catch (error) {
       console.error('Sync failed:', error);
-      toast.error('Sync failed. Please try again.');
+      setNotification({ open: true, message: 'Sync failed. Please try again.', severity: 'error' });
     } finally {
       setSyncing(false);
     }
@@ -25,105 +44,110 @@ function Navbar({ lastSync, setLastSync }) {
     return new Date(dateString).toLocaleString();
   };
 
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
+  };
+
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: 'var(--primary-color)' }}>
-      <div className="container-fluid">
-        <NavLink className="navbar-brand" to="/dashboard" style={{ color: 'var(--secondary-color)' }}>
-          <i className="bi bi-pc-display-horizontal"></i> WorkSpaces Inventory
-        </NavLink>
-        <button 
-          className="navbar-toggler" 
-          type="button" 
-          data-bs-toggle="collapse" 
-          data-bs-target="#navbarNav"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
-        <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav me-auto">
-            <li className="nav-item">
-              <NavLink 
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                to="/dashboard"
-                style={({ isActive }) => ({ 
-                  color: isActive ? 'var(--secondary-color)' : '#fff' 
-                })}
-              >
-                Dashboard
-              </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink 
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                to="/workspaces"
-                style={({ isActive }) => ({ 
-                  color: isActive ? 'var(--secondary-color)' : '#fff' 
-                })}
-              >
-                WorkSpaces
-              </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink 
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                to="/usage"
-                style={({ isActive }) => ({ 
-                  color: isActive ? 'var(--secondary-color)' : '#fff' 
-                })}
-              >
-                Usage
-              </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink 
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                to="/billing"
-                style={({ isActive }) => ({ 
-                  color: isActive ? 'var(--secondary-color)' : '#fff' 
-                })}
-              >
-                Billing
-              </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink 
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                to="/cloudtrail"
-                style={({ isActive }) => ({ 
-                  color: isActive ? 'var(--secondary-color)' : '#fff' 
-                })}
-              >
-                Audit Log
-              </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink 
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                to="/admin"
-                style={({ isActive }) => ({ 
-                  color: isActive ? 'var(--secondary-color)' : '#fff' 
-                })}
-              >
-                <i className="bi bi-gear-fill"></i> Admin
-              </NavLink>
-            </li>
-          </ul>
-          <div className="d-flex align-items-center">
-            <span className="text-light me-3" style={{ fontSize: '0.85rem' }}>
-              Last sync: {formatDate(lastSync)}
-            </span>
-            <button 
-              className="btn btn-outline-light btn-sm" 
-              onClick={handleSync}
-              disabled={syncing}
+    <>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography
+            variant="h6"
+            component={NavLink}
+            to="/dashboard"
+            sx={{
+              flexGrow: 0,
+              textDecoration: 'none',
+              color: 'secondary.main',
+              fontWeight: 'bold',
+              mr: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            <ComputerIcon /> WorkSpaces Inventory
+          </Typography>
+
+          <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
+            <Button
+              component={NavLink}
+              to="/dashboard"
+              startIcon={<DashboardIcon />}
+              sx={{ color: 'white' }}
             >
-              <i className={`bi bi-arrow-repeat ${syncing ? 'spinner-border spinner-border-sm' : ''}`}></i> 
-              {syncing ? ' Syncing...' : ' Sync Now'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
+              Dashboard
+            </Button>
+            <Button
+              component={NavLink}
+              to="/workspaces"
+              startIcon={<ComputerIcon />}
+              sx={{ color: 'white' }}
+            >
+              WorkSpaces
+            </Button>
+            <Button
+              component={NavLink}
+              to="/usage"
+              startIcon={<QueryStatsIcon />}
+              sx={{ color: 'white' }}
+            >
+              Usage
+            </Button>
+            <Button
+              component={NavLink}
+              to="/billing"
+              startIcon={<AttachMoneyIcon />}
+              sx={{ color: 'white' }}
+            >
+              Billing
+            </Button>
+            <Button
+              component={NavLink}
+              to="/cloudtrail"
+              startIcon={<HistoryIcon />}
+              sx={{ color: 'white' }}
+            >
+              Audit Log
+            </Button>
+            <Button
+              component={NavLink}
+              to="/admin"
+              startIcon={<SettingsIcon />}
+              sx={{ color: 'white' }}
+            >
+              Admin
+            </Button>
+          </Box>
+
+          <Typography variant="body2" sx={{ mr: 2, color: 'white' }}>
+            Last sync: {formatDate(lastSync)}
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleSync}
+            disabled={syncing}
+            startIcon={syncing ? <CircularProgress size={16} color="inherit" /> : <SyncIcon />}
+            sx={{ color: 'white', borderColor: 'white' }}
+          >
+            {syncing ? 'Syncing...' : 'Sync Now'}
+          </Button>
+        </Toolbar>
+      </AppBar>
+
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={5000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseNotification} severity={notification.severity} sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }
 

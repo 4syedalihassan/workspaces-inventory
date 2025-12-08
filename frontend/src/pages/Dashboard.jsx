@@ -1,5 +1,20 @@
 import { useEffect, useState } from 'react';
 import { getDashboardStats, getWorkspaces, getSyncHistory } from '../api';
+import {
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  CircularProgress
+} from '@mui/material';
 
 function Dashboard({ setLastSync }) {
   const [stats, setStats] = useState({});
@@ -33,146 +48,159 @@ function Dashboard({ setLastSync }) {
     }
   };
 
-  const getStateBadgeClass = (state) => {
+  const getStateBadgeColor = (state) => {
     const stateMap = {
       'AVAILABLE': 'success',
       'PENDING': 'warning',
-      'TERMINATED': 'danger',
-      'STOPPED': 'secondary'
+      'TERMINATED': 'error',
+      'STOPPED': 'default'
     };
-    return `bg-${stateMap[state] || 'secondary'}`;
+    return stateMap[state] || 'default';
+  };
+
+  const getSyncStatusColor = (status) => {
+    if (status === 'completed') return 'success';
+    if (status === 'failed') return 'error';
+    return 'warning';
   };
 
   if (loading) {
     return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
     );
   }
 
   return (
-    <div>
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <div className="card" style={{ borderLeft: '4px solid var(--secondary-color)' }}>
-            <div className="card-body">
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>
+    <Box>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ borderLeft: 6, borderColor: 'secondary.main' }}>
+            <CardContent>
+              <Typography variant="h3" color="primary" fontWeight="bold">
                 {stats.total_workspaces || 0}
-              </div>
-              <div style={{ color: '#666', fontSize: '0.9rem' }}>Total WorkSpaces</div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card" style={{ borderLeft: '4px solid var(--secondary-color)' }}>
-            <div className="card-body">
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total WorkSpaces
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ borderLeft: 6, borderColor: 'secondary.main' }}>
+            <CardContent>
+              <Typography variant="h3" color="primary" fontWeight="bold">
                 {stats.active_workspaces || 0}
-              </div>
-              <div style={{ color: '#666', fontSize: '0.9rem' }}>Active WorkSpaces</div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card" style={{ borderLeft: '4px solid var(--secondary-color)' }}>
-            <div className="card-body">
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Active WorkSpaces
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ borderLeft: 6, borderColor: 'secondary.main' }}>
+            <CardContent>
+              <Typography variant="h3" color="primary" fontWeight="bold">
                 {stats.current_month_usage?.total_hours?.toFixed(1) || '0'}
-              </div>
-              <div style={{ color: '#666', fontSize: '0.9rem' }}>Usage Hours (This Month)</div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card" style={{ borderLeft: '4px solid var(--secondary-color)' }}>
-            <div className="card-body">
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Usage Hours (This Month)
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ borderLeft: 6, borderColor: 'secondary.main' }}>
+            <CardContent>
+              <Typography variant="h3" color="primary" fontWeight="bold">
                 {stats.current_month_usage?.avg_hours?.toFixed(1) || '0'}
-              </div>
-              <div style={{ color: '#666', fontSize: '0.9rem' }}>Avg Hours/WorkSpace</div>
-            </div>
-          </div>
-        </div>
-      </div>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Avg Hours/WorkSpace
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-      <div className="row">
-        <div className="col-md-6">
-          <div className="card">
-            <div className="card-header">
-              <h5 className="mb-0">Recent WorkSpaces</h5>
-            </div>
-            <div className="card-body">
-              <div className="table-responsive">
-                <table className="table table-sm table-hover">
-                  <thead>
-                    <tr>
-                      <th>User</th>
-                      <th>State</th>
-                      <th>Running Mode</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Recent WorkSpaces
+              </Typography>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>User</TableCell>
+                      <TableCell>State</TableCell>
+                      <TableCell>Running Mode</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
                     {recentWorkspaces.map((ws, idx) => (
-                      <tr key={idx}>
-                        <td>{ws.user_name || '-'}</td>
-                        <td>
-                          <span className={`badge ${getStateBadgeClass(ws.state)}`}>
-                            {ws.state || '-'}
-                          </span>
-                        </td>
-                        <td>{ws.running_mode || '-'}</td>
-                      </tr>
+                      <TableRow key={idx}>
+                        <TableCell>{ws.user_name || '-'}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={ws.state || '-'}
+                            color={getStateBadgeColor(ws.state)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{ws.running_mode || '-'}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div className="col-md-6">
-          <div className="card">
-            <div className="card-header">
-              <h5 className="mb-0">Sync History</h5>
-            </div>
-            <div className="card-body">
-              <div className="table-responsive">
-                <table className="table table-sm table-hover">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Records</th>
-                      <th>Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Sync History
+              </Typography>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Type</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Records</TableCell>
+                      <TableCell>Time</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
                     {syncHistory.map((sync, idx) => (
-                      <tr key={idx}>
-                        <td>{sync.sync_type}</td>
-                        <td>
-                          <span className={`badge bg-${
-                            sync.status === 'completed' ? 'success' : 
-                            sync.status === 'failed' ? 'danger' : 'warning'
-                          }`}>
-                            {sync.status}
-                          </span>
-                        </td>
-                        <td>{sync.records_processed || 0}</td>
-                        <td>{new Date(sync.started_at).toLocaleString()}</td>
-                      </tr>
+                      <TableRow key={idx}>
+                        <TableCell>{sync.sync_type}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={sync.status}
+                            color={getSyncStatusColor(sync.status)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{sync.records_processed || 0}</TableCell>
+                        <TableCell>{new Date(sync.started_at).toLocaleString()}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
   );
 }
 

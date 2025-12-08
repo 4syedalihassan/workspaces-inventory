@@ -1,39 +1,24 @@
 import { useEffect, useState } from 'react';
 import { getUsage, exportUsage } from '../api';
-import { toast } from 'react-toastify';
+import { Box, Card, CardContent, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Grid, IconButton, Menu, MenuItem, Snackbar, Alert } from '@mui/material';
+import { Search, Clear, FileDownload } from '@mui/icons-material';
 
 function Usage() {
   const [usage, setUsage] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({
-    user_name: '',
-    month_from: '',
-    month_to: ''
-  });
-  const [pagination, setPagination] = useState({ offset: 0, limit: 50, total: 0 });
+  const [filters, setFilters] = useState({ user_name: '', month_from: '', month_to: '' });
+  const [exportAnchorEl, setExportAnchorEl] = useState(null);
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
-  useEffect(() => {
-    loadUsage();
-  }, []);
+  useEffect(() => { loadUsage(); }, []);
 
-  const loadUsage = async (newOffset = 0) => {
+  const loadUsage = async () => {
     setLoading(true);
     try {
-      const params = {
-        ...filters,
-        offset: newOffset,
-        limit: pagination.limit
-      };
-      
-      Object.keys(params).forEach(key => {
-        if (params[key] === '' || params[key] === null || params[key] === undefined) {
-          delete params[key];
-        }
-      });
-
+      const params = { ...filters };
+      Object.keys(params).forEach(key => { if (params[key] === '') delete params[key]; });
       const data = await getUsage(params);
       setUsage(data.data || []);
-      setPagination(prev => ({ ...prev, offset: newOffset, total: data.total || 0 }));
     } catch (error) {
       console.error('Error loading usage:', error);
     } finally {
@@ -42,132 +27,90 @@ function Usage() {
   };
 
   const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleApplyFilters = () => {
-    loadUsage(0);
-  };
-
-  const handleClearFilters = () => {
-    setFilters({
-      user_name: '',
-      month_from: '',
-      month_to: ''
-    });
-    setTimeout(() => loadUsage(0), 0);
+    setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleExport = async (format) => {
+    setExportAnchorEl(null);
     try {
       await exportUsage(format, filters);
+      setNotification({ open: true, message: 'Export started successfully', severity: 'success' });
     } catch (error) {
       console.error('Export failed:', error);
-      toast.error('Export failed. Please try again.');
+      setNotification({ open: true, message: 'Export failed. Please try again.', severity: 'error' });
     }
   };
 
   return (
-    <div>
-      <div className="card mb-3" style={{ backgroundColor: '#fff', padding: '1rem', borderRadius: '0.5rem' }}>
-        <div className="row g-3">
-          <div className="col-md-2">
-            <label className="form-label">User Name</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              name="user_name"
-              value={filters.user_name}
-              onChange={handleFilterChange}
-              placeholder="Search..." 
-            />
-          </div>
-          <div className="col-md-2">
-            <label className="form-label">Month From</label>
-            <input 
-              type="month" 
-              className="form-control" 
-              name="month_from"
-              value={filters.month_from}
-              onChange={handleFilterChange}
-            />
-          </div>
-          <div className="col-md-2">
-            <label className="form-label">Month To</label>
-            <input 
-              type="month" 
-              className="form-control" 
-              name="month_to"
-              value={filters.month_to}
-              onChange={handleFilterChange}
-            />
-          </div>
-          <div className="col-md-2 d-flex align-items-end">
-            <button className="btn btn-primary me-2" onClick={handleApplyFilters}>
-              <i className="bi bi-search"></i> Filter
-            </button>
-            <button className="btn btn-outline-secondary" onClick={handleClearFilters}>Clear</button>
-          </div>
-          <div className="col-md-4 d-flex align-items-end justify-content-end">
-            <div className="dropdown">
-              <button 
-                className="btn btn-success dropdown-toggle" 
-                type="button" 
-                data-bs-toggle="dropdown"
-              >
-                <i className="bi bi-download"></i> Export
-              </button>
-              <ul className="dropdown-menu">
-                <li><a className="dropdown-item" href="#" onClick={(e) => { e.preventDefault(); handleExport('xlsx'); }}>Excel</a></li>
-                <li><a className="dropdown-item" href="#" onClick={(e) => { e.preventDefault(); handleExport('csv'); }}>CSV</a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
+    <Box>
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Grid container spacing={2} alignItems="flex-end">
+            <Grid item xs={12} md={3}>
+              <TextField fullWidth label="User Name" name="user_name" value={filters.user_name} onChange={handleFilterChange} size="small" />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField fullWidth label="Month From" name="month_from" type="month" value={filters.month_from} onChange={handleFilterChange} size="small" InputLabelProps={{ shrink: true }} />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField fullWidth label="Month To" name="month_to" type="month" value={filters.month_to} onChange={handleFilterChange} size="small" InputLabelProps={{ shrink: true }} />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Box display="flex" gap={1}>
+                <Button variant="contained" startIcon={<Search />} onClick={loadUsage} fullWidth>Filter</Button>
+                <Button variant="outlined" startIcon={<Clear />} onClick={() => { setFilters({ user_name: '', month_from: '', month_to: '' }); setTimeout(loadUsage, 0); }}>Clear</Button>
+                <IconButton onClick={(e) => setExportAnchorEl(e.currentTarget)} color="primary"><FileDownload /></IconButton>
+                <Menu anchorEl={exportAnchorEl} open={Boolean(exportAnchorEl)} onClose={() => setExportAnchorEl(null)}>
+                  <MenuItem onClick={() => handleExport('xlsx')}>Excel</MenuItem>
+                  <MenuItem onClick={() => handleExport('csv')}>CSV</MenuItem>
+                </Menu>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
-      <div className="card">
-        <div className="card-body">
-          {loading && (
-            <div className="text-center py-3">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-            </div>
-          )}
-          
-          {!loading && (
-            <div className="table-responsive">
-              <table className="table table-hover">
-                <thead>
-                  <tr>
-                    <th>Workspace ID</th>
-                    <th>User</th>
-                    <th>Bundle</th>
-                    <th>Running Mode</th>
-                    <th>Month</th>
-                    <th>Usage Hours</th>
-                  </tr>
-                </thead>
-                <tbody>
+      <Card>
+        <CardContent>
+          {loading ? (
+            <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Workspace ID</TableCell>
+                    <TableCell>User</TableCell>
+                    <TableCell>Bundle</TableCell>
+                    <TableCell>Running Mode</TableCell>
+                    <TableCell>Month</TableCell>
+                    <TableCell>Usage Hours</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {usage.map((u, idx) => (
-                    <tr key={idx}>
-                      <td><code>{u.workspace_id}</code></td>
-                      <td>{u.user_name || '-'}</td>
-                      <td><small>{u.bundle_id || '-'}</small></td>
-                      <td>{u.running_mode || '-'}</td>
-                      <td>{u.month}</td>
-                      <td>{u.usage_hours?.toFixed(2) || 0}</td>
-                    </tr>
+                    <TableRow key={idx}>
+                      <TableCell><code>{u.workspace_id}</code></TableCell>
+                      <TableCell>{u.user_name || '-'}</TableCell>
+                      <TableCell><small>{u.bundle_id || '-'}</small></TableCell>
+                      <TableCell>{u.running_mode || '-'}</TableCell>
+                      <TableCell>{u.month}</TableCell>
+                      <TableCell>{u.usage_hours?.toFixed(2) || 0}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
-        </div>
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+
+      <Snackbar open={notification.open} autoHideDuration={5000} onClose={() => setNotification({...notification, open: false})} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Alert onClose={() => setNotification({...notification, open: false})} severity={notification.severity} sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }
 

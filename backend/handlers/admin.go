@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/4syedalihassan/workspaces-inventory/models"
@@ -247,15 +248,22 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 func (h *AdminHandler) DeleteUser(c *gin.Context) {
 	userID := c.Param("id")
 
+	// Convert userID string to int for comparison
+	userIDInt, err := strconv.Atoi(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
 	// Don't allow deleting yourself
 	currentUserID, _ := c.Get("user_id")
-	if currentUserID == userID {
+	if currentUserIDInt, ok := currentUserID.(int); ok && currentUserIDInt == userIDInt {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete your own account"})
 		return
 	}
 
-	_, err := h.DB.Exec("DELETE FROM users WHERE id = $1", userID)
-	if err != nil {
+	_, deleteErr := h.DB.Exec("DELETE FROM users WHERE id = $1", userIDInt)
+	if deleteErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
 	}
@@ -265,7 +273,6 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 
 // TestAWSConnection tests AWS credentials
 func (h *AdminHandler) TestAWSConnection(c *gin.Context) {
-	// Import services package at top of file
 	awsService := &services.AWSService{DB: h.DB}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)

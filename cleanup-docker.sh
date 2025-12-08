@@ -114,10 +114,10 @@ else
     fi
     
     print_info "Removing project images..."
-    # Remove images with workspaces in the name
-    docker images --format "{{.Repository}}:{{.Tag}}" | grep workspaces | xargs -r docker rmi -f 2>/dev/null || true
-    # Remove images from the project directories
-    docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "backend|frontend|ai-service" | grep -v postgres | xargs -r docker rmi -f 2>/dev/null || true
+    # Remove images with workspaces in the name (safer pattern)
+    docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "workspaces|workspace-inventory" | xargs -r docker rmi -f 2>/dev/null || true
+    # Remove images from the project directories (with specific context)
+    docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | awk '$1 ~ /^(workspaces-|workspace-)/ {print $2}' | xargs -r docker rmi -f 2>/dev/null || true
     print_success "Images removed"
     
     print_info "Cleaning Docker builder cache..."
@@ -130,32 +130,72 @@ print_success "Cleanup complete!"
 echo ""
 
 # Ask if user wants to rebuild
-read -p "Do you want to rebuild and start the services now? [y/N]: " rebuild
-if [[ $rebuild =~ ^[Yy]$ ]]; then
+if [ "$NUCLEAR" = true ]; then
+    # For nuclear cleanup, ask which compose file to use
+    read -p "Do you want to rebuild and start the services now? [y/N]: " rebuild
+    if [[ $rebuild =~ ^[Yy]$ ]]; then
+        echo ""
+        echo "Which docker-compose file would you like to use?"
+        echo "1) docker-compose.yml (Single container - Node.js + SQLite)"
+        echo "2) docker-compose.lite.yml (Two containers - Go backend + frontend, no AI)"
+        echo "3) docker-compose.go.yml (Three containers - Full featured, RECOMMENDED)"
+        read -p "Enter choice [1-3]: " compose_choice
+        
+        case $compose_choice in
+            1) COMPOSE_FILE="docker-compose.yml" ;;
+            2) COMPOSE_FILE="docker-compose.lite.yml" ;;
+            3) COMPOSE_FILE="docker-compose.go.yml" ;;
+            *)
+                print_error "Invalid choice. Defaulting to docker-compose.go.yml"
+                COMPOSE_FILE="docker-compose.go.yml"
+                ;;
+        esac
+    else
+        COMPOSE_FILE=""
+    fi
+else
+    # For targeted cleanup, use the go compose file (most common)
+    read -p "Do you want to rebuild and start the services now? [y/N]: " rebuild
+    if [[ $rebuild =~ ^[Yy]$ ]]; then
+        COMPOSE_FILE="docker-compose.go.yml"
+    else
+        COMPOSE_FILE=""
+    fi
+fi
+
+if [ -n "$COMPOSE_FILE" ]; then
     echo ""
-    print_info "Building images (this may take several minutes)..."
-    docker-compose -f docker-compose.go.yml build --no-cache
+    print_info "Building images with $COMPOSE_FILE (this may take several minutes)..."
+    docker compose -f "$COMPOSE_FILE" build --no-cache
     
     print_info "Starting services..."
-    docker-compose -f docker-compose.go.yml up -d
+    docker compose -f "$COMPOSE_FILE" up -d
     
     echo ""
     print_success "Services started! Checking status..."
     echo ""
-    docker-compose -f docker-compose.go.yml ps
+    docker compose -f "$COMPOSE_FILE" ps
     
     echo ""
     print_info "Access the application at:"
-    echo "  Frontend: http://localhost:3001"
-    echo "  Backend:  http://localhost:8080"
-    echo "  AI Service: http://localhost:8081"
+    if [ "$COMPOSE_FILE" = "docker-compose.yml" ]; then
+        echo "  Application: http://localhost:3001"
+    elif [ "$COMPOSE_FILE" = "docker-compose.lite.yml" ]; then
+        echo "  Frontend: http://localhost:3002"
+        echo "  Backend:  http://localhost:8082"
+    else
+        echo "  Frontend: http://localhost:3001"
+        echo "  Backend:  http://localhost:8080"
+        echo "  AI Service: http://localhost:8081"
+    fi
     echo ""
-    print_info "View logs with: docker-compose -f docker-compose.go.yml logs -f"
+    print_info "View logs with: docker compose -f $COMPOSE_FILE logs -f"
 else
     echo ""
-    print_info "To rebuild and start services manually, run:"
-    echo "  docker-compose -f docker-compose.go.yml build --no-cache"
-    echo "  docker-compose -f docker-compose.go.yml up -d"
+    print_info "To rebuild and start services manually, choose one:"
+    echo "  docker compose -f docker-compose.yml build --no-cache && docker compose -f docker-compose.yml up -d"
+    echo "  docker compose -f docker-compose.lite.yml build --no-cache && docker compose -f docker-compose.lite.yml up -d"
+    echo "  docker compose -f docker-compose.go.yml build --no-cache && docker compose -f docker-compose.go.yml up -d"
 fi
 
 echo ""

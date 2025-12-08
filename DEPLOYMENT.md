@@ -910,9 +910,7 @@ docker network rm workspaces-network 2>/dev/null || true
 
 # Step 4: Remove project images
 docker rmi -f $(docker images -q 'workspaces-*' 2>/dev/null) 2>/dev/null || true
-docker rmi -f $(docker images -q '*backend*' | grep -v postgres 2>/dev/null) 2>/dev/null || true
-docker rmi -f $(docker images -q '*frontend*' | grep -v postgres 2>/dev/null) 2>/dev/null || true
-docker rmi -f $(docker images -q '*ai-service*' 2>/dev/null) 2>/dev/null || true
+docker rmi -f $(docker images -q '*workspaces*' 2>/dev/null) 2>/dev/null || true
 
 # Step 5: Clean Docker builder cache
 docker builder prune -af

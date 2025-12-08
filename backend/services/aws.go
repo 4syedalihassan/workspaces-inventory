@@ -118,8 +118,10 @@ func (s *AWSService) upsertWorkspace(ws wstypes.Workspace) error {
 
 	var state *string
 	// State is a WorkspaceState type (string-based), not a pointer
-	st := string(ws.State)
-	state = &st
+	if ws.State != "" {
+		st := string(ws.State)
+		state = &st
+	}
 
 	_, err := s.DB.Exec(`
 		INSERT INTO workspaces (

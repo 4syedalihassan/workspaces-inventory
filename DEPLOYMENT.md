@@ -830,6 +830,155 @@ aws ecs create-service \
 
 ## Troubleshooting
 
+### Docker Image Errors
+
+**Error:** `No such image: sha256:...` or `The image for the service you're trying to recreate has been removed`
+
+This error occurs when Docker tries to use cached image references that no longer exist (e.g., after running `docker image prune` or system cleanup).
+
+**Solution 1: Rebuild images and recreate containers**
+
+```bash
+# Stop and remove containers
+docker-compose -f docker-compose.go.yml down
+
+# Remove dangling images
+docker image prune -f
+
+# Rebuild all images from scratch
+docker-compose -f docker-compose.go.yml build --no-cache
+
+# Start containers with freshly built images
+docker-compose -f docker-compose.go.yml up -d
+```
+
+**Solution 2: Complete cleanup and fresh start**
+
+```bash
+# Stop all containers
+docker-compose -f docker-compose.go.yml down
+
+# Remove all containers, networks, and images (WARNING: This removes all unused Docker resources)
+docker system prune -a --volumes
+
+# Rebuild and start
+docker-compose -f docker-compose.go.yml build --no-cache
+docker-compose -f docker-compose.go.yml up -d
+```
+
+**Solution 3: Remove specific project images and rebuild**
+
+```bash
+# Stop containers
+docker-compose -f docker-compose.go.yml down
+
+# Remove project-specific images
+docker images | grep workspaces | awk '{print $3}' | xargs docker rmi -f
+
+# Rebuild
+docker-compose -f docker-compose.go.yml build
+docker-compose -f docker-compose.go.yml up -d
+```
+
+**Important Notes:**
+- Always backup your data before running cleanup commands
+- The `--volumes` flag will delete database data unless you have external volume backups
+- If you want to preserve data, omit the `--volumes` flag
+
+### ContainerConfig KeyError
+
+**Error:** `KeyError: 'ContainerConfig'` or `404 Client Error for http+docker://localhost/v1.52/images/...`
+
+This error indicates severe Docker state corruption where containers reference non-existent images. This happens when:
+- Images were deleted while containers were still referencing them
+- Docker daemon was improperly shut down
+- Docker Compose state is out of sync with Docker daemon
+
+**Solution: Force remove containers and rebuild**
+
+```bash
+# Step 1: Force remove all project containers (ignores errors)
+docker rm -f workspaces-backend workspaces-frontend workspaces-ai 2>/dev/null || true
+docker rm -f workspaces-backend-lite workspaces-frontend-lite 2>/dev/null || true
+docker rm -f workspaces-inventory 2>/dev/null || true
+
+# Step 2: Remove all project networks
+docker network rm workspaces-network 2>/dev/null || true
+
+# Step 3: Clean up orphaned volumes (OPTIONAL - skips if you want to preserve data)
+# docker volume rm postgres-data redis-data workspaces-data 2>/dev/null || true
+
+# Step 4: Remove project images
+docker rmi -f $(docker images -q 'workspaces-*' 2>/dev/null) 2>/dev/null || true
+docker rmi -f $(docker images -q '*workspaces*' 2>/dev/null) 2>/dev/null || true
+
+# Step 5: Clean Docker builder cache
+docker builder prune -af
+
+# Step 6: Rebuild everything from scratch
+docker-compose -f docker-compose.go.yml build --no-cache
+
+# Step 7: Start services
+docker-compose -f docker-compose.go.yml up -d
+
+# Step 8: Verify everything is running
+docker-compose -f docker-compose.go.yml ps
+```
+
+**Quick one-liner (nuclear option - USE WITH CAUTION):**
+
+```bash
+docker rm -f $(docker ps -aq) 2>/dev/null; docker system prune -af --volumes; docker-compose -f docker-compose.go.yml build --no-cache && docker-compose -f docker-compose.go.yml up -d
+```
+
+**⚠️ WARNING:** The nuclear option will:
+- Stop and remove ALL Docker containers (not just this project)
+- Delete ALL unused images, networks, and volumes
+- Require rebuilding all images from scratch
+
+**Alternative: Use Docker Compose down with volumes**
+
+```bash
+# This properly cleans up everything managed by docker-compose
+docker-compose -f docker-compose.go.yml down -v --remove-orphans --rmi all
+
+# Then rebuild and start
+docker-compose -f docker-compose.go.yml build --no-cache
+docker-compose -f docker-compose.go.yml up -d
+```
+
+### Port Allocation Errors
+
+**Error:** `Bind for 0.0.0.0:8080 failed: port is already allocated`
+
+This error occurs when trying to start containers while another Docker Compose stack is already running.
+
+**Solution:**
+
+```bash
+# Stop all running containers first
+docker-compose -f docker-compose.go.yml down
+docker-compose -f docker-compose.lite.yml down
+docker-compose -f docker-compose.yml down
+
+# Then start the desired stack
+docker-compose -f docker-compose.go.yml up -d
+```
+
+**Docker Compose File Ports:**
+
+| File | Frontend Port | Backend Port | AI Service Port |
+|------|---------------|--------------|-----------------|
+| `docker-compose.yml` | 3001 | N/A | N/A |
+| `docker-compose.lite.yml` | 3002 | 8082 | N/A |
+| `docker-compose.go.yml` | 3001 | 8080 | 8081 |
+
+**Which file should you use?**
+
+- `docker-compose.yml` - Single container (Node.js + SQLite) - **Simplest setup**
+- `docker-compose.lite.yml` - Two containers (Go backend + frontend, no AI) - **Lightweight**
+- `docker-compose.go.yml` - Three containers (Go backend + frontend + AI service) - **Full featured** (Recommended)
+
 ### Container Won't Start
 
 ```bash

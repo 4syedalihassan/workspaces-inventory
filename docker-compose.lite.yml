@@ -4,9 +4,9 @@ services:
     build:
       context: .
       dockerfile: frontend-container/Dockerfile
-    container_name: workspaces-frontend
+    container_name: workspaces-frontend-lite
     ports:
-      - "3001:80"
+      - "3002:80"
     depends_on:
       - backend
     networks:
@@ -18,9 +18,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: workspaces-backend
+    container_name: workspaces-backend-lite
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@localhost:5432/workspaces?sslmode=disable
       - REDIS_URL=redis://localhost:6379/0

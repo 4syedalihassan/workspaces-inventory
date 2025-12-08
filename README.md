@@ -152,6 +152,12 @@ docker-compose -f docker-compose.go.yml up --build
 # AI:        http://localhost:8081
 ```
 
+**Troubleshooting Docker issues:**
+If you encounter port allocation or image errors, use the cleanup script:
+```bash
+./cleanup-docker.sh
+```
+
 **Default Admin Credentials**:
 ```
 Username: admin
@@ -481,6 +487,50 @@ When you outgrow Lightsail (>10,000 WorkSpaces):
 ---
 
 ## 🐛 Troubleshooting
+
+### Port allocation errors
+
+**Error:** `Bind for 0.0.0.0:8080 failed: port is already allocated`
+
+```bash
+# Stop all running stacks first
+docker-compose -f docker-compose.go.yml down
+docker-compose -f docker-compose.lite.yml down
+docker-compose -f docker-compose.yml down
+
+# Then start the desired one
+docker-compose -f docker-compose.go.yml up -d
+```
+
+### Docker image/container errors
+
+**Errors like:** 
+- `No such image: sha256:...`
+- `KeyError: 'ContainerConfig'`
+- `The image for the service you're trying to recreate has been removed`
+
+**Quick fix using cleanup script:**
+
+```bash
+# Run the interactive cleanup script
+./cleanup-docker.sh
+
+# Follow the prompts to choose cleanup level:
+# 1) Soft cleanup (preserves data) - RECOMMENDED
+# 2) Hard cleanup (removes data)
+# 3) Nuclear option (removes ALL Docker resources)
+```
+
+**Manual fix:**
+
+```bash
+# Complete cleanup and rebuild
+docker-compose -f docker-compose.go.yml down -v --remove-orphans --rmi all
+docker-compose -f docker-compose.go.yml build --no-cache
+docker-compose -f docker-compose.go.yml up -d
+```
+
+For detailed troubleshooting, see [DEPLOYMENT.md](DEPLOYMENT.md#troubleshooting).
 
 ### Backend won't start
 

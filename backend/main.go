@@ -48,6 +48,7 @@ func main() {
 	aiHandler := &handlers.AIHandler{AIServiceURL: cfg.AIServiceURL}
 	syncHandler := &handlers.SyncHandler{DB: db}
 	dashboardHandler := &handlers.DashboardHandler{DB: db}
+	adminHandler := &handlers.AdminHandler{DB: db}
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -98,6 +99,22 @@ func main() {
 		admin := api.Group("/admin")
 		admin.Use(middleware.RequireRole("ADMIN"))
 		{
+			// Settings management
+			admin.GET("/settings", adminHandler.GetSettings)
+			admin.GET("/settings/:key", adminHandler.GetSetting)
+			admin.PUT("/settings/:key", adminHandler.UpdateSetting)
+			admin.PUT("/settings", adminHandler.UpdateBulkSettings)
+
+			// User management
+			admin.GET("/users", adminHandler.ListUsers)
+			admin.POST("/users", adminHandler.CreateUser)
+			admin.PUT("/users/:id", adminHandler.UpdateUser)
+			admin.DELETE("/users/:id", adminHandler.DeleteUser)
+
+			// Integration tests
+			admin.POST("/test/aws", adminHandler.TestAWSConnection)
+
+			// Legacy config endpoint
 			admin.GET("/config", func(c *gin.Context) {
 				c.JSON(200, gin.H{
 					"environment": cfg.Environment,

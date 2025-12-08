@@ -267,6 +267,38 @@ func RunMigrations() error {
 				CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 			`,
 		},
+		{
+			version: 7,
+			sql: `
+				CREATE TABLE IF NOT EXISTS settings (
+					id SERIAL PRIMARY KEY,
+					key VARCHAR(255) UNIQUE NOT NULL,
+					value TEXT,
+					encrypted BOOLEAN DEFAULT false,
+					category VARCHAR(100),
+					description TEXT,
+					created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+					updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				);
+
+				CREATE INDEX IF NOT EXISTS idx_settings_key ON settings(key);
+				CREATE INDEX IF NOT EXISTS idx_settings_category ON settings(category);
+
+				-- Insert default settings
+				INSERT INTO settings (key, value, encrypted, category, description) VALUES
+					('aws.region', 'us-east-1', false, 'aws', 'AWS Region for WorkSpaces'),
+					('aws.access_key_id', '', true, 'aws', 'AWS Access Key ID'),
+					('aws.secret_access_key', '', true, 'aws', 'AWS Secret Access Key'),
+					('duo.integration_key', '', true, 'duo', 'DUO Integration Key'),
+					('duo.secret_key', '', true, 'duo', 'DUO Secret Key'),
+					('duo.api_hostname', '', false, 'duo', 'DUO API Hostname'),
+					('sync.auto_sync_enabled', 'false', false, 'sync', 'Enable automatic synchronization'),
+					('sync.interval_minutes', '60', false, 'sync', 'Sync interval in minutes'),
+					('app.company_name', 'WorkSpaces Inventory', false, 'general', 'Company name'),
+					('app.default_timezone', 'UTC', false, 'general', 'Default timezone')
+				ON CONFLICT (key) DO NOTHING;
+			`,
+		},
 	}
 
 	for _, migration := range migrations {

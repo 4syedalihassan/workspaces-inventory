@@ -4,7 +4,7 @@ Modern React 18 frontend for the AWS WorkSpaces Inventory application.
 
 ## Technology Stack
 
-- **React 18** - UI framework
+- **React 19** - UI framework
 - **Vite** - Build tool and development server
 - **React Router** - Client-side routing
 - **Bootstrap 5** - UI components and styling

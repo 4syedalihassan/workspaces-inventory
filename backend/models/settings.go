@@ -114,11 +114,11 @@ func UpdateSetting(db *sql.DB, key, value string) error {
 	// Encrypt if needed
 	finalValue := value
 	if encrypted && value != "" {
-		encrypted, err := encrypt(value)
+		encryptedValue, err := encrypt(value)
 		if err != nil {
 			return err
 		}
-		finalValue = encrypted
+		finalValue = encryptedValue
 	}
 
 	// Upsert

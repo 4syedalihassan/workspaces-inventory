@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -14,6 +15,9 @@ var DB *sql.DB
 
 // Connect establishes a connection to PostgreSQL
 func Connect(databaseURL string) *sql.DB {
+	// First, ensure the database exists
+	ensureDatabaseExists(databaseURL)
+
 	var err error
 	DB, err = sql.Open("postgres", databaseURL)
 	if err != nil {
@@ -25,13 +29,79 @@ func Connect(databaseURL string) *sql.DB {
 	DB.SetMaxIdleConns(5)
 	DB.SetConnMaxLifetime(5 * time.Minute)
 
-	// Test connection
-	if err = DB.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+	// Test connection with retries
+	maxRetries := 30
+	for i := 0; i < maxRetries; i++ {
+		err = DB.Ping()
+		if err == nil {
+			break
+		}
+		log.Printf("Waiting for database to be ready... (%d/%d)", i+1, maxRetries)
+		time.Sleep(1 * time.Second)
+	}
+
+	if err != nil {
+		log.Fatalf("Failed to ping database after %d retries: %v", maxRetries, err)
 	}
 
 	log.Println("Successfully connected to PostgreSQL")
 	return DB
+}
+
+// ensureDatabaseExists creates the database if it doesn't exist
+func ensureDatabaseExists(databaseURL string) {
+	// Parse the database name from the URL
+	// Format: postgresql://user:pass@host:port/dbname?params
+	parts := strings.Split(databaseURL, "/")
+	if len(parts) < 4 {
+		log.Fatalf("Invalid database URL format")
+	}
+
+	dbNamePart := parts[len(parts)-1]
+	dbName := strings.Split(dbNamePart, "?")[0]
+
+	// Connect to default postgres database
+	defaultURL := strings.Replace(databaseURL, "/"+dbNamePart, "/postgres"+strings.Split(dbNamePart, dbName)[1], 1)
+
+	db, err := sql.Open("postgres", defaultURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to postgres database: %v", err)
+	}
+	defer db.Close()
+
+	// Wait for PostgreSQL to be ready
+	maxRetries := 30
+	for i := 0; i < maxRetries; i++ {
+		err = db.Ping()
+		if err == nil {
+			break
+		}
+		log.Printf("Waiting for PostgreSQL to start... (%d/%d)", i+1, maxRetries)
+		time.Sleep(1 * time.Second)
+	}
+
+	if err != nil {
+		log.Fatalf("PostgreSQL not available after %d retries: %v", maxRetries, err)
+	}
+
+	// Check if database exists
+	var exists bool
+	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '%s')", dbName)
+	err = db.QueryRow(query).Scan(&exists)
+	if err != nil {
+		log.Fatalf("Failed to check if database exists: %v", err)
+	}
+
+	if !exists {
+		log.Printf("Database '%s' does not exist, creating it...", dbName)
+		_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+		if err != nil {
+			log.Fatalf("Failed to create database: %v", err)
+		}
+		log.Printf("Database '%s' created successfully", dbName)
+	} else {
+		log.Printf("Database '%s' already exists", dbName)
+	}
 }
 
 // Close closes the database connection

@@ -211,9 +211,9 @@ async function deleteUser(userId, username) {
 
 // Helper function to convert setting keys to element IDs
 function settingKeyToElementId(key) {
-    // Replace category prefix (e.g., 'aws.' -> 'aws-', 'duo.' -> 'duo-')
-    // and replace underscores with hyphens
-    return key.replace(/\./g, '-').replace(/_/g, '-');
+    // Replace first dot with hyphen, then replace first underscore with hyphen
+    // This matches the original logic: key.replace('prefix.', 'prefix-').replace('_', '-')
+    return key.replace('.', '-').replace('_', '-');
 }
 
 // Integration Settings

@@ -261,7 +261,7 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	_, deleteErr := h.DB.Exec("DELETE FROM users WHERE id = $1", userID)
+	_, deleteErr := h.DB.Exec("DELETE FROM users WHERE id = $1", userIDInt)
 	if deleteErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return

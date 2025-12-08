@@ -101,15 +101,19 @@ func (s *AWSService) upsertWorkspace(ws wstypes.Workspace) error {
 		rootVolSize = ws.WorkspaceProperties.RootVolumeSizeGib
 		userVolSize = ws.WorkspaceProperties.UserVolumeSizeGib
 		// ComputeTypeName is a Compute type (string-based), not a pointer
-		name := string(ws.WorkspaceProperties.ComputeTypeName)
-		computeTypeName = &name
+		if ws.WorkspaceProperties.ComputeTypeName != "" {
+			name := string(ws.WorkspaceProperties.ComputeTypeName)
+			computeTypeName = &name
+		}
 	}
 
 	var runningMode *string
 	if ws.WorkspaceProperties != nil {
 		// RunningMode is a RunningMode type (string-based), not a pointer
-		mode := string(ws.WorkspaceProperties.RunningMode)
-		runningMode = &mode
+		if ws.WorkspaceProperties.RunningMode != "" {
+			mode := string(ws.WorkspaceProperties.RunningMode)
+			runningMode = &mode
+		}
 	}
 
 	var state *string

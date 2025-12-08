@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getUsage, exportUsage } from '../api';
+import { toast } from 'react-toastify';
 
 function Usage() {
   const [usage, setUsage] = useState([]);
@@ -63,7 +64,7 @@ function Usage() {
       await exportUsage(format, filters);
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
+      toast.error('Export failed. Please try again.');
     }
   };
 

@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { triggerSync } from '../api';
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 
 function Navbar({ lastSync, setLastSync }) {
   const [syncing, setSyncing] = useState(false);
@@ -10,10 +11,10 @@ function Navbar({ lastSync, setLastSync }) {
     try {
       await triggerSync('all');
       setLastSync(new Date().toISOString());
-      alert('Sync triggered successfully');
+      toast.success('Sync triggered successfully');
     } catch (error) {
       console.error('Sync failed:', error);
-      alert('Sync failed. Please try again.');
+      toast.error('Sync failed. Please try again.');
     } finally {
       setSyncing(false);
     }

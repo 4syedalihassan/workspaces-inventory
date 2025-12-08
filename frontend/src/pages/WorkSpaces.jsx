@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getWorkspaces, getFilterOptions, exportWorkspaces } from '../api';
+import { toast } from 'react-toastify';
 
 function WorkSpaces() {
   const [workspaces, setWorkspaces] = useState([]);
@@ -75,9 +76,10 @@ function WorkSpaces() {
   const handleExport = async (format) => {
     try {
       await exportWorkspaces(format, filters);
+      toast.success('Export started successfully');
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
+      toast.error('Export failed. Please try again.');
     }
   };
 

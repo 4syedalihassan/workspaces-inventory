@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getCloudTrailEvents, exportCloudTrail } from '../api';
+import { toast } from 'react-toastify';
 
 function CloudTrail() {
   const [events, setEvents] = useState([]);
@@ -65,7 +66,7 @@ function CloudTrail() {
       await exportCloudTrail(format, filters);
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
+      toast.error('Export failed. Please try again.');
     }
   };
 

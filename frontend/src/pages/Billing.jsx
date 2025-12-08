@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getBilling, exportBilling } from '../api';
+import { toast } from 'react-toastify';
 
 function Billing() {
   const [billing, setBilling] = useState([]);
@@ -63,7 +64,7 @@ function Billing() {
       await exportBilling(format, filters);
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
+      toast.error('Export failed. Please try again.');
     }
   };
 

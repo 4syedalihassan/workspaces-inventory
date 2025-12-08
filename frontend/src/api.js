@@ -1,5 +1,5 @@
 // API Base URL
-const API_BASE = '/api/v1';
+export const API_BASE = '/api/v1';
 
 // Helper function to make API requests
 async function fetchAPI(endpoint, options = {}) {

@@ -145,7 +145,7 @@ func (s *AWSService) upsertWorkspace(ws wstypes.Workspace) error {
 	`,
 		ws.WorkspaceId,
 		ws.UserName,
-		ws.WorkspaceProperties, // Display name (if available)
+		"", // Display name not available in WorkspaceProperties
 		ws.DirectoryId,
 		ws.IpAddress,
 		state,

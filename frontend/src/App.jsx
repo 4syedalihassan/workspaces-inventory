@@ -6,6 +6,7 @@ import WorkSpaces from './pages/WorkSpaces';
 import Usage from './pages/Usage';
 import Billing from './pages/Billing';
 import CloudTrail from './pages/CloudTrail';
+import Admin from './pages/Admin';
 import './App.css';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
           <Route path="/usage" element={<Usage />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/cloudtrail" element={<CloudTrail />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </div>
     </div>

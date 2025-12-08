@@ -95,6 +95,17 @@ function Navbar({ lastSync, setLastSync }) {
                 Audit Log
               </NavLink>
             </li>
+            <li className="nav-item">
+              <NavLink 
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                to="/admin"
+                style={({ isActive }) => ({ 
+                  color: isActive ? 'var(--secondary-color)' : '#fff' 
+                })}
+              >
+                <i className="bi bi-gear-fill"></i> Admin
+              </NavLink>
+            </li>
           </ul>
           <div className="d-flex align-items-center">
             <span className="text-light me-3" style={{ fontSize: '0.85rem' }}>

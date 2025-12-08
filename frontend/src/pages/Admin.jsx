@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal, Button, Form, Tabs, Tab, Badge, Alert } from 'react-bootstrap';
-
-const API_BASE = '/api/v1';
+import { API_BASE } from '../api';
 
 function Admin() {
   const [activeTab, setActiveTab] = useState('settings');

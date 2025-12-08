@@ -89,18 +89,9 @@ func (s *AWSService) SyncWorkSpaces(ctx context.Context) (int, error) {
 
 // upsertWorkspace inserts or updates a workspace in the database
 func (s *AWSService) upsertWorkspace(ws wstypes.Workspace) error {
+	// Note: CreationTime, TerminationTime, and LastKnownUserConnectionTimestamp
+	// are not available in AWS SDK v2 Workspace struct, so we set them to nil
 	var createdAt, terminatedAt, lastConnection *time.Time
-
-	// Handle time conversions for workspace timestamps
-	if ws.CreationTime != nil {
-		createdAt = ws.CreationTime
-	}
-	if ws.TerminationTime != nil {
-		terminatedAt = ws.TerminationTime
-	}
-	if ws.LastKnownUserConnectionTimestamp != nil {
-		lastConnection = ws.LastKnownUserConnectionTimestamp
-	}
 
 	// Convert bundle properties
 	var rootVolSize, userVolSize *int32
@@ -109,23 +100,22 @@ func (s *AWSService) upsertWorkspace(ws wstypes.Workspace) error {
 	if ws.WorkspaceProperties != nil {
 		rootVolSize = ws.WorkspaceProperties.RootVolumeSizeGib
 		userVolSize = ws.WorkspaceProperties.UserVolumeSizeGib
-		if ws.WorkspaceProperties.ComputeTypeName != nil {
-			name := string(*ws.WorkspaceProperties.ComputeTypeName)
-			computeTypeName = &name
-		}
+		// ComputeTypeName is a Compute type (string-based), not a pointer
+		name := string(ws.WorkspaceProperties.ComputeTypeName)
+		computeTypeName = &name
 	}
 
 	var runningMode *string
-	if ws.WorkspaceProperties != nil && ws.WorkspaceProperties.RunningMode != nil {
-		mode := string(*ws.WorkspaceProperties.RunningMode)
+	if ws.WorkspaceProperties != nil {
+		// RunningMode is a RunningMode type (string-based), not a pointer
+		mode := string(ws.WorkspaceProperties.RunningMode)
 		runningMode = &mode
 	}
 
 	var state *string
-	if ws.State != nil {
-		st := string(*ws.State)
-		state = &st
-	}
+	// State is a WorkspaceState type (string-based), not a pointer
+	st := string(ws.State)
+	state = &st
 
 	_, err := s.DB.Exec(`
 		INSERT INTO workspaces (

@@ -126,7 +126,7 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 	users := []models.User{}
 	for rows.Next() {
 		var u models.User
-		err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.DuoVerified,
+		err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.DUOVerified,
 			&u.LastLogin, &u.CreatedAt, &u.UpdatedAt)
 		if err != nil {
 			continue

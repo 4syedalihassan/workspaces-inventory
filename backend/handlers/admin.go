@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -225,12 +226,12 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 	i := 1
 
 	for key, value := range updates {
-		query += ", " + key + " = $" + string(rune(i+'0'))
+		query += ", " + key + " = $" + fmt.Sprintf("%d", i)
 		args = append(args, value)
 		i++
 	}
 
-	query += " WHERE id = $" + string(rune(i+'0'))
+	query += " WHERE id = $" + fmt.Sprintf("%d", i)
 	args = append(args, userID)
 
 	_, err := h.DB.Exec(query, args...)

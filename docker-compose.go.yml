@@ -53,11 +53,9 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - MODEL_PATH=/models/Phi-3-mini-128k-instruct-Q4_K_M.gguf
+      - MODEL_PATH=/models/phi-3-mini-128k-instruct.Q4_K_M.gguf
       - THREADS=4
       - CONTEXT_SIZE=8192
-    volumes:
-      - "./ai-service:/models:ro"
     networks:
       - workspaces-network
     restart: unless-stopped

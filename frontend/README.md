@@ -1,16 +1,124 @@
-# React + Vite
+# WorkSpaces Inventory Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Modern React 18 frontend for the AWS WorkSpaces Inventory application.
 
-Currently, two official plugins are available:
+## Technology Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 18** - UI framework
+- **Vite** - Build tool and development server
+- **React Router** - Client-side routing
+- **Bootstrap 5** - UI components and styling
+- **Bootstrap Icons** - Icon library
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
 
-## Expanding the ESLint configuration
+- Node.js 20+ 
+- npm 10+
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Install Dependencies
+
+```bash
+npm install
+```
+
+### Run Development Server
+
+```bash
+npm run dev
+```
+
+The app will be available at http://localhost:5173
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+The built files will be in the `dist/` directory.
+
+### Lint Code
+
+```bash
+npm run lint
+```
+
+## Project Structure
+
+```
+frontend/
+├── src/
+│   ├── components/      # Reusable React components
+│   │   └── Navbar.jsx   # Navigation bar
+│   ├── pages/           # Page components
+│   │   ├── Dashboard.jsx    # Dashboard with stats
+│   │   ├── WorkSpaces.jsx   # WorkSpaces list with filtering
+│   │   ├── Usage.jsx        # Usage tracking
+│   │   ├── Billing.jsx      # Billing data
+│   │   └── CloudTrail.jsx   # Audit logs
+│   ├── api.js           # API client functions
+│   ├── App.jsx          # Main app component
+│   ├── App.css          # App-level styles
+│   ├── main.jsx         # Entry point
+│   └── index.css        # Global styles
+├── public/              # Static assets
+├── index.html           # HTML template
+├── vite.config.js       # Vite configuration
+└── package.json         # Dependencies and scripts
+```
+
+## API Integration
+
+The frontend communicates with the Go backend via REST API at `/api/v1`. All API calls are handled through the `api.js` module.
+
+### Key API Endpoints
+
+- `GET /api/v1/dashboard` - Dashboard statistics
+- `GET /api/v1/workspaces` - List workspaces with filtering
+- `GET /api/v1/usage` - Usage data
+- `GET /api/v1/billing` - Billing data
+- `GET /api/v1/cloudtrail` - Audit trail events
+- `POST /api/v1/sync/trigger` - Trigger data sync
+- `GET /api/v1/sync/history` - Sync history
+
+## Features
+
+### Dashboard
+- Real-time statistics (total workspaces, active, usage hours)
+- Recent workspaces list
+- Sync history
+
+### WorkSpaces
+- Comprehensive workspace inventory
+- Advanced filtering (user, state, running mode, terminated status)
+- Export to Excel/CSV
+- Pagination
+
+### Usage
+- Monthly usage hours tracking
+- Filtering by user and date range
+- Export capabilities
+
+### Billing
+- Cost data from AWS Cost Explorer
+- Filtering and export
+
+### Audit Log
+- CloudTrail event tracking
+- Workspace lifecycle events
+- User action attribution
+
+## Docker Deployment
+
+The frontend is containerized with Nginx in a multi-stage build:
+
+1. **Build stage**: Node.js container builds the React app
+2. **Runtime stage**: Nginx Alpine serves the static files
+
+See `frontend-container/Dockerfile` for details.
+
+## Environment Variables
+
+No environment variables needed - the frontend proxies all API requests through Nginx to the backend.

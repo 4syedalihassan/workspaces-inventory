@@ -1,0 +1,27 @@
+.card {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border: none;
+  margin-bottom: 1rem;
+}
+
+.btn-primary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+  color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: #cc7a00;
+  border-color: #cc7a00;
+  color: var(--primary-color);
+}
+
+.table-responsive {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.badge {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}

@@ -947,6 +947,57 @@ docker-compose -f docker-compose.go.yml build --no-cache
 docker-compose -f docker-compose.go.yml up -d
 ```
 
+### Docker Compose Log Watcher Error
+
+**Error:** `Exception in thread Thread-10 (watch_events): KeyError: 'id'`
+
+This is a Python exception from older versions of docker-compose's log watcher thread. It occurs when the event stream doesn't contain an expected 'id' field.
+
+**Important:** This error is **benign and does not affect functionality**. The services continue to run normally, as evidenced by successful health checks and normal operation. This is purely a cosmetic issue in the log output.
+
+**Root Cause:**
+- Older Python-based docker-compose versions have a bug in the event watching thread
+- The error occurs when docker-compose files are missing the `version` field
+- Modern Docker Compose v2 (written in Go) doesn't require the version field, but older versions do
+
+**Solution:**
+All docker-compose files in this project now include `version: '3.8'` for compatibility with both old and new docker-compose versions. If you still see this error:
+
+1. **Upgrade to Docker Compose v2** (recommended):
+   ```bash
+   # Check current version
+   docker compose version
+   
+   # Install Docker Compose v2 (if not already installed)
+   # Follow instructions at: https://docs.docker.com/compose/install/
+   ```
+
+2. **Use docker compose (v2) instead of docker-compose (v1)**:
+   ```bash
+   # Old syntax (Python-based)
+   docker-compose -f docker-compose.go.yml up
+   
+   # New syntax (Go-based)
+   docker compose -f docker-compose.go.yml up
+   ```
+
+3. **Ignore the error**: The services are working correctly despite the error message. You can safely ignore it.
+
+**Verification:**
+To verify services are running correctly despite the error:
+```bash
+# Check health endpoints
+curl http://localhost:8080/health
+curl http://localhost:8081/health
+
+# Check container status
+docker compose -f docker-compose.go.yml ps
+
+# View actual application logs (without the watch_events error)
+docker logs workspaces-backend
+docker logs workspaces-ai
+```
+
 ### Port Allocation Errors
 
 **Error:** `Bind for 0.0.0.0:8080 failed: port is already allocated`

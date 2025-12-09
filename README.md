@@ -534,7 +534,7 @@ For detailed troubleshooting, see [DEPLOYMENT.md](DEPLOYMENT.md#troubleshooting)
 
 ### Docker Compose log watcher error
 
-**Error:** `Exception in thread Thread-10 (watch_events): KeyError: 'id'`
+**Error:** `Exception in thread (watch_events): KeyError: 'id'`
 
 This is a benign error from older docker-compose versions and **does not affect functionality**. Services continue to run normally. To resolve:
 

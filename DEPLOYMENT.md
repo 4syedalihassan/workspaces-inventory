@@ -949,7 +949,7 @@ docker-compose -f docker-compose.go.yml up -d
 
 ### Docker Compose Log Watcher Error
 
-**Error:** `Exception in thread Thread-10 (watch_events): KeyError: 'id'`
+**Error:** `Exception in thread (watch_events): KeyError: 'id'`
 
 This is a Python exception from older versions of docker-compose's log watcher thread. It occurs when the event stream doesn't contain an expected 'id' field.
 

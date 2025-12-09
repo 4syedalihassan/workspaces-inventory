@@ -2,6 +2,11 @@
 
 # Docker Cleanup Script for WorkSpaces Inventory
 # This script helps resolve common Docker issues related to missing images and corrupted state
+# 
+# Common errors this fixes:
+# - ERROR: 'ContainerConfig' - occurs when containers reference deleted images
+# - ImageNotFound: 404 Client Error - images were removed but containers still exist
+# - Port allocation errors - containers from multiple compose files conflict
 
 set -e
 
@@ -91,14 +96,22 @@ if [ "$NUCLEAR" = true ]; then
 else
     # Targeted cleanup for this project
     print_info "Stopping docker-compose services..."
+    
+    # Try both docker-compose v1 and v2 commands
     docker-compose -f docker-compose.go.yml down 2>/dev/null || true
+    docker compose -f docker-compose.go.yml down 2>/dev/null || true
     docker-compose -f docker-compose.lite.yml down 2>/dev/null || true
+    docker compose -f docker-compose.lite.yml down 2>/dev/null || true
     docker-compose -f docker-compose.yml down 2>/dev/null || true
+    docker compose -f docker-compose.yml down 2>/dev/null || true
     
     print_info "Force removing project containers..."
     docker rm -f workspaces-backend workspaces-frontend workspaces-ai 2>/dev/null || true
     docker rm -f workspaces-backend-lite workspaces-frontend-lite 2>/dev/null || true
     docker rm -f workspaces-inventory 2>/dev/null || true
+    
+    # Also remove any stopped containers with workspaces in name
+    docker ps -a --filter "name=workspaces-" -q | xargs -r docker rm -f 2>/dev/null || true
     print_success "Containers removed"
     
     print_info "Removing project networks..."

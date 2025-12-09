@@ -143,8 +143,12 @@ cd workspaces-inventory
 cp .env.go.example .env
 # Edit .env with your AWS credentials
 
-# Start all 3 containers
-docker-compose -f docker-compose.go.yml up --build
+# Start all 3 containers (easiest method)
+./start-services.sh full
+
+# Or manually with docker compose
+docker compose -f docker-compose.go.yml build
+docker compose -f docker-compose.go.yml up -d
 
 # Access the application
 # Frontend:  http://localhost:3001
@@ -153,9 +157,17 @@ docker-compose -f docker-compose.go.yml up --build
 ```
 
 **Troubleshooting Docker issues:**
-If you encounter port allocation or image errors, use the cleanup script:
+If you encounter image errors, port allocation issues, or container problems:
 ```bash
+# Use the cleanup script to fix common issues
 ./cleanup-docker.sh
+
+# Or use the automated start script (recommended)
+./start-services.sh full    # For full deployment
+./start-services.sh lite    # For lite deployment (no AI)
+./start-services.sh simple  # For simple deployment
+
+# For detailed troubleshooting, see TROUBLESHOOTING.md
 ```
 
 **Default Admin Credentials**:
@@ -488,26 +500,40 @@ When you outgrow Lightsail (>10,000 WorkSpaces):
 
 ## 🐛 Troubleshooting
 
-### Port allocation errors
+For detailed troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
-**Error:** `Bind for 0.0.0.0:8080 failed: port is already allocated`
+### Quick Fixes
+
+**Port allocation errors:**
 
 ```bash
 # Stop all running stacks first
-docker-compose -f docker-compose.go.yml down
-docker-compose -f docker-compose.lite.yml down
-docker-compose -f docker-compose.yml down
+./cleanup-docker.sh  # Choose option 1 (soft cleanup)
+
+# Or manually
+docker compose -f docker-compose.go.yml down
+docker compose -f docker-compose.lite.yml down
+docker compose -f docker-compose.yml down
 
 # Then start the desired one
-docker-compose -f docker-compose.go.yml up -d
+./start-services.sh full
 ```
 
-### Docker image/container errors
+**Docker image/container errors:**
 
 **Errors like:** 
+- `ERROR: 'ContainerConfig'`
 - `No such image: sha256:...`
-- `KeyError: 'ContainerConfig'`
-- `The image for the service you're trying to recreate has been removed`
+- `ImageNotFound: 404 Client Error`
+
+These occur when containers reference deleted images.
+
+**Quick fix using start script (recommended):**
+
+```bash
+# The start script automatically detects and fixes image issues
+./start-services.sh full
+```
 
 **Quick fix using cleanup script:**
 
@@ -524,13 +550,18 @@ docker-compose -f docker-compose.go.yml up -d
 **Manual fix:**
 
 ```bash
-# Complete cleanup and rebuild
-docker-compose -f docker-compose.go.yml down -v --remove-orphans --rmi all
-docker-compose -f docker-compose.go.yml build --no-cache
-docker-compose -f docker-compose.go.yml up -d
+# Stop containers and remove them
+docker compose -f docker-compose.go.yml down
+
+# Force remove any orphaned containers
+docker ps -a --filter "name=workspaces-" -q | xargs docker rm -f 2>/dev/null || true
+
+# Rebuild and start
+docker compose -f docker-compose.go.yml build --no-cache
+docker compose -f docker-compose.go.yml up -d
 ```
 
-For detailed troubleshooting, see [DEPLOYMENT.md](DEPLOYMENT.md#troubleshooting).
+For more issues including backend startup, AI service timeout, database migrations, and network problems, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ### Docker Compose log watcher error
 

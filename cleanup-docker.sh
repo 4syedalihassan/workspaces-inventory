@@ -2,6 +2,11 @@
 
 # Docker Cleanup Script for WorkSpaces Inventory
 # This script helps resolve common Docker issues related to missing images and corrupted state
+# 
+# Common errors this fixes:
+# - ERROR: 'ContainerConfig' - occurs when containers reference deleted images
+# - ImageNotFound: 404 Client Error - images were removed but containers still exist
+# - Port allocation errors - containers from multiple compose files conflict
 
 set -e
 
@@ -91,14 +96,25 @@ if [ "$NUCLEAR" = true ]; then
 else
     # Targeted cleanup for this project
     print_info "Stopping docker-compose services..."
+    
+    # Try both docker-compose v1 and v2 commands
     docker-compose -f docker-compose.go.yml down 2>/dev/null || true
+    docker compose -f docker-compose.go.yml down 2>/dev/null || true
     docker-compose -f docker-compose.lite.yml down 2>/dev/null || true
+    docker compose -f docker-compose.lite.yml down 2>/dev/null || true
     docker-compose -f docker-compose.yml down 2>/dev/null || true
+    docker compose -f docker-compose.yml down 2>/dev/null || true
     
     print_info "Force removing project containers..."
     docker rm -f workspaces-backend workspaces-frontend workspaces-ai 2>/dev/null || true
     docker rm -f workspaces-backend-lite workspaces-frontend-lite 2>/dev/null || true
     docker rm -f workspaces-inventory 2>/dev/null || true
+    
+    # Also remove any stopped containers with workspaces in name (portable approach)
+    WORKSPACES_CONTAINERS=$(docker ps -a --filter "name=workspaces-" -q)
+    if [ -n "$WORKSPACES_CONTAINERS" ]; then
+        echo "$WORKSPACES_CONTAINERS" | xargs docker rm -f 2>/dev/null || true
+    fi
     print_success "Containers removed"
     
     print_info "Removing project networks..."
@@ -114,10 +130,17 @@ else
     fi
     
     print_info "Removing project images..."
-    # Remove images with workspaces in the name (safer pattern)
-    docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "workspaces|workspace-inventory" | xargs -r docker rmi -f 2>/dev/null || true
+    # Remove images with workspaces in the name (portable approach)
+    WORKSPACES_IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "workspaces|workspace-inventory" || true)
+    if [ -n "$WORKSPACES_IMAGES" ]; then
+        echo "$WORKSPACES_IMAGES" | xargs docker rmi -f 2>/dev/null || true
+    fi
+    
     # Remove images from the project directories (with specific context)
-    docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | awk '$1 ~ /^(workspaces-|workspace-)/ {print $2}' | xargs -r docker rmi -f 2>/dev/null || true
+    WORKSPACES_IMAGE_IDS=$(docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | awk '$1 ~ /^(workspaces-|workspace-)/ {print $2}' || true)
+    if [ -n "$WORKSPACES_IMAGE_IDS" ]; then
+        echo "$WORKSPACES_IMAGE_IDS" | xargs docker rmi -f 2>/dev/null || true
+    fi
     print_success "Images removed"
     
     print_info "Cleaning Docker builder cache..."

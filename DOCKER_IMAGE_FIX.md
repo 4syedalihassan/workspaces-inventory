@@ -34,10 +34,22 @@ Common scenarios:
 
 **Use the provided scripts (Recommended):**
 
-```bash
-# Always use start-services.sh to start
-./start-services.sh full
+The `start-services.sh` script now includes **automatic cleanup** before building:
 
+```bash
+# Always use start-services.sh to start (now with auto-clean)
+./start-services.sh full
+```
+
+**What auto-clean does:**
+- Removes stopped workspaces containers
+- Removes dangling Docker images
+- Ensures clean state before building
+- Prevents ContainerConfig errors automatically
+
+**Alternative: Manual cleanup:**
+
+```bash
 # Use cleanup-docker.sh before manual operations
 ./cleanup-docker.sh
 ```

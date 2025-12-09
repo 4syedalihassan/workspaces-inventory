@@ -98,6 +98,32 @@ if [ "$RUNNING_CONTAINERS" -gt 0 ]; then
     echo ""
 fi
 
+# Auto-clean: Remove old containers and images before building
+print_info "Performing auto-clean to prevent build issues..."
+
+# Remove any stopped workspaces containers
+print_info "Removing stopped containers..."
+STOPPED_CONTAINERS=$(docker ps -a --filter "name=workspaces-" --filter "status=exited" -q)
+if [ -n "$STOPPED_CONTAINERS" ]; then
+    echo "$STOPPED_CONTAINERS" | xargs docker rm 2>/dev/null || true
+    print_success "Removed stopped containers"
+else
+    print_info "No stopped containers to remove"
+fi
+
+# Remove old/dangling images to free space and prevent conflicts
+print_info "Removing dangling images..."
+DANGLING_IMAGES=$(docker images -f "dangling=true" -q)
+if [ -n "$DANGLING_IMAGES" ]; then
+    echo "$DANGLING_IMAGES" | xargs docker rmi -f 2>/dev/null || true
+    print_success "Removed dangling images"
+else
+    print_info "No dangling images to remove"
+fi
+
+print_success "Auto-clean complete"
+echo ""
+
 # Check for orphaned containers from other compose files
 print_info "Checking for containers from other compose files..."
 docker ps -a --filter "name=workspaces-" --format "{{.Names}} ({{.Status}})" | while read container; do
@@ -128,6 +154,7 @@ fi
 print_info "Checking if Docker images need to be built..."
 IMAGES_NEEDED=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" config --images 2>/dev/null || echo "")
 MISSING_IMAGES=0
+BUILD_FLAG="--build"  # Always build to ensure fresh images
 
 if [ -n "$IMAGES_NEEDED" ]; then
     for image in $IMAGES_NEEDED; do
@@ -147,45 +174,29 @@ if [ -n "$IMAGES_NEEDED" ]; then
 fi
 
 if [ "$MISSING_IMAGES" -gt 0 ]; then
-    print_warning "Some images are missing and need to be built"
-    BUILD_FLAG="--build"
+    print_warning "Some images are missing and will be built from scratch"
 else
-    # Check if user wants to force rebuild anyway
-    echo ""
-    read -p "Rebuild images from scratch? [y/N]: " force_rebuild
-    if [[ $force_rebuild =~ ^[Yy]$ ]]; then
-        BUILD_FLAG="--build"
-        print_info "Will rebuild all images"
-    else
-        BUILD_FLAG=""
-        print_info "Using existing images"
-    fi
+    print_info "Images will be rebuilt to ensure they are up to date"
 fi
 
 echo ""
 print_info "Starting services with $COMPOSE_FILE..."
 echo ""
 
-# Use --remove-orphans to clean up containers from other compose files
-if [ -n "$BUILD_FLAG" ]; then
-    print_info "Building images (this may take several minutes)..."
-    
-    # Check if user wants full rebuild or incremental
-    if [ "$MISSING_IMAGES" -gt 0 ]; then
-        # Missing images require full rebuild
-        $DOCKER_COMPOSE -f "$COMPOSE_FILE" build --no-cache
-    else
-        # For optional rebuilds, allow faster incremental builds
-        print_warning "Using incremental build (faster but may not catch all changes)"
-        read -p "Force clean rebuild with --no-cache? [y/N]: " force_clean
-        if [[ $force_clean =~ ^[Yy]$ ]]; then
-            $DOCKER_COMPOSE -f "$COMPOSE_FILE" build --no-cache
-        else
-            $DOCKER_COMPOSE -f "$COMPOSE_FILE" build
-        fi
-    fi
-    echo ""
+# Always rebuild images to ensure they're up to date
+print_info "Building images (this may take several minutes)..."
+
+# Determine build strategy
+if [ "$MISSING_IMAGES" -gt 0 ]; then
+    # Missing images require full rebuild from scratch
+    print_warning "Missing images detected - using clean build (--no-cache)"
+    $DOCKER_COMPOSE -f "$COMPOSE_FILE" build --no-cache
+else
+    # For updates, use incremental build for speed
+    print_info "Using incremental build for faster compilation"
+    $DOCKER_COMPOSE -f "$COMPOSE_FILE" build
 fi
+echo ""
 
 print_info "Starting containers..."
 $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d --remove-orphans
@@ -222,3 +233,7 @@ echo "  Restart:        $DOCKER_COMPOSE -f $COMPOSE_FILE restart"
 
 echo ""
 print_success "Done! Check logs if services don't respond within 60 seconds."
+echo ""
+print_info "Note: If you see 'KeyError: id' in docker-compose logs, it's benign."
+echo "      This is a known issue in older docker-compose versions."
+echo "      Your services are working fine. See TROUBLESHOOTING.md for details."

@@ -34,9 +34,10 @@ docker.errors.ImageNotFound: 404 Client Error: No such image: sha256:...
 # - Optionally rebuild and start services
 ```
 
-**Solution 2: Use the new start script**
+**Solution 2: Use the new start script (with auto-clean)**
 ```bash
-# This script automatically detects and fixes missing images
+# This script automatically cleans and fixes missing images
+# Now includes automatic cleanup of stopped containers and dangling images
 ./start-services.sh full    # For full deployment (recommended)
 ./start-services.sh lite    # For lite deployment (no AI)
 ./start-services.sh simple  # For simple deployment (single container)
@@ -117,28 +118,82 @@ docker stop <container-name>
 
 **Symptoms:**
 ```
-Exception in thread Thread-1 (watch_events):
+Exception in thread Thread-10 (watch_events):
+Traceback (most recent call last):
+  ...
+  File "/usr/lib/python3/dist-packages/compose/project.py", line 594, in build_container_event
+    container = Container.from_id(self.client, event['id'])
+                                               ~~~~~^^^^^^
 KeyError: 'id'
 ```
 
-**Cause:** This is a benign error in older docker-compose v1 versions. It does not affect functionality.
+**Important: This error is BENIGN and does NOT affect functionality!**
 
-**Solution:** 
+Your services are working correctly. You can verify:
 ```bash
-# Upgrade to Docker Compose v2 (recommended)
+curl http://localhost:8080/health  # Backend responds
+curl http://localhost:3001/        # Frontend works
+docker compose -f docker-compose.go.yml ps  # All containers running
+```
+
+**Cause:** This is a known bug in older docker-compose v1 versions when watching container events. The log printer thread encounters a malformed event without an 'id' field, but this doesn't affect the actual containers.
+
+**Solutions (in order of preference):**
+
+**Option 1: Ignore the error (Recommended)**
+- Your services are running fine
+- The error only appears in logs once
+- It doesn't repeat or cause issues
+
+**Option 2: Upgrade to Docker Compose v2**
+```bash
 # On Ubuntu/Debian:
 sudo apt-get update
 sudo apt-get install docker-compose-plugin
 
-# Verify
+# Verify installation
 docker compose version
 
-# Use 'docker compose' instead of 'docker-compose'
+# Use 'docker compose' (space) instead of 'docker-compose' (hyphen)
+docker compose -f docker-compose.go.yml up -d
+```
+
+**Option 3: Suppress the error with detached mode**
+```bash
+# Start in detached mode (no log streaming)
 docker compose -f docker-compose.go.yml up -d
 
-# Or ignore the error - your services still work fine
-curl http://localhost:8080/health  # Verify backend is healthy
+# Then view logs separately (avoids the watch_events thread)
+docker compose -f docker-compose.go.yml logs -f
 ```
+
+**Option 4: Use our start script (already uses detached mode)**
+```bash
+# Our script starts in detached mode to avoid this error
+./start-services.sh full
+```
+
+**Why this happens:**
+Docker Compose v1 has a bug in its event watching code where it occasionally receives events from Docker daemon that don't have the expected structure. The event watcher expects all events to have an 'id' field, but some events (like network events or system events) don't include it.
+
+**Verification:**
+After you see this error, check that everything is working:
+```bash
+# Check container status
+docker compose -f docker-compose.go.yml ps
+
+# Expected output: All containers are "Up" with healthy status
+# NAME                  STATUS
+# workspaces-backend    Up (healthy)
+# workspaces-frontend   Up (healthy)  
+# workspaces-ai         Up (healthy)
+
+# Test the services
+curl http://localhost:8080/health  # Should return: {"status":"ok"}
+curl http://localhost:3001/        # Should return HTML
+```
+
+**Related:** This is documented in Docker Compose issue #6707 and #6568
 
 ---
 

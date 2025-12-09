@@ -143,7 +143,7 @@ cd workspaces-inventory
 cp .env.go.example .env
 # Edit .env with your AWS credentials
 
-# Start all 3 containers (easiest method)
+# Start all 3 containers (auto-cleans and builds fresh images)
 ./start-services.sh full
 
 # Or manually with docker compose
@@ -156,13 +156,20 @@ docker compose -f docker-compose.go.yml up -d
 # AI:        http://localhost:8081
 ```
 
+**What start-services.sh does:**
+- ✅ Automatically cleans up stopped containers and dangling images
+- ✅ Detects missing images and rebuilds them
+- ✅ Prevents ContainerConfig errors by ensuring clean state
+- ✅ Uses incremental builds for speed when possible
+- ✅ Handles conflicts between different compose files
+
 **Troubleshooting Docker issues:**
 If you encounter image errors, port allocation issues, or container problems:
 ```bash
 # Use the cleanup script to fix common issues
 ./cleanup-docker.sh
 
-# Or use the automated start script (recommended)
+# Or use the automated start script (recommended - includes auto-clean)
 ./start-services.sh full    # For full deployment
 ./start-services.sh lite    # For lite deployment (no AI)
 ./start-services.sh simple  # For simple deployment
@@ -569,17 +576,21 @@ For more issues including backend startup, AI service timeout, database migratio
 
 **Error:** `Exception in thread (watch_events): KeyError: 'id'`
 
-This is a benign error from older docker-compose versions and **does not affect functionality**. Services continue to run normally. To resolve:
+This is a **benign error** from older docker-compose versions and **does not affect functionality**. Services continue to run normally. To resolve:
 
 ```bash
-# Use Docker Compose v2 (recommended)
-docker compose -f docker-compose.go.yml up
+# Best option: Use Docker Compose v2 (recommended)
+docker compose -f docker-compose.go.yml up -d
+
+# Or use our start script (already uses detached mode to avoid this)
+./start-services.sh full
 
 # Or ignore the error - your services are working fine
 curl http://localhost:8080/health  # Verify backend is healthy
+docker compose -f docker-compose.go.yml ps  # Check all containers are up
 ```
 
-See [DEPLOYMENT.md](DEPLOYMENT.md#troubleshooting) for detailed explanation.
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#docker-compose-version-issues) for detailed explanation.
 
 ### Backend won't start
 

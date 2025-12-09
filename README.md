@@ -502,6 +502,8 @@ When you outgrow Lightsail (>10,000 WorkSpaces):
 
 For detailed troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
+For understanding and preventing Docker image errors, see [DOCKER_IMAGE_FIX.md](DOCKER_IMAGE_FIX.md).
+
 ### Quick Fixes
 
 **Port allocation errors:**

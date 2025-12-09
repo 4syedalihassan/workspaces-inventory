@@ -532,6 +532,22 @@ docker-compose -f docker-compose.go.yml up -d
 
 For detailed troubleshooting, see [DEPLOYMENT.md](DEPLOYMENT.md#troubleshooting).
 
+### Docker Compose log watcher error
+
+**Error:** `Exception in thread (watch_events): KeyError: 'id'`
+
+This is a benign error from older docker-compose versions and **does not affect functionality**. Services continue to run normally. To resolve:
+
+```bash
+# Use Docker Compose v2 (recommended)
+docker compose -f docker-compose.go.yml up
+
+# Or ignore the error - your services are working fine
+curl http://localhost:8080/health  # Verify backend is healthy
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md#troubleshooting) for detailed explanation.
+
 ### Backend won't start
 
 ```bash

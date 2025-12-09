@@ -36,3 +36,7 @@ coverage/
 # Temp files
 tmp/
 temp/
+
+# Frontend build artifacts
+frontend/dist/
+frontend/node_modules/

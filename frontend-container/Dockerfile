@@ -1,6 +1,22 @@
-# Container 1: Frontend (Nginx + Static Assets)
-# Lightweight Nginx container for serving React SPA
+# Multi-stage build for React frontend
+# Stage 1: Build the React application
+FROM node:20-alpine AS builder
 
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY frontend/ ./
+
+# Build the React app
+RUN npm run build
+
+# Stage 2: Serve with Nginx
 FROM nginx:alpine
 
 # Remove default nginx config
@@ -9,9 +25,8 @@ RUN rm /etc/nginx/conf.d/default.conf
 # Copy custom nginx configuration
 COPY frontend-container/nginx.conf /etc/nginx/conf.d/
 
-# Copy static assets (HTML, CSS, JS)
-# Assumes frontend is already built
-COPY public /usr/share/nginx/html
+# Copy built React app from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Expose port 80
 EXPOSE 80

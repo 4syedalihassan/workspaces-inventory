@@ -126,7 +126,7 @@ echo ""
 
 # Check for orphaned containers from other compose files
 print_info "Checking for containers from other compose files..."
-docker ps -a --filter "name=workspaces-" --format "{{.Names}} ({{.Status}})" | while read container; do
+docker ps -a --filter "name=workspaces-" --format "{{.Names}} ({{.Status}})" | while read -r container; do
     if [ -n "$container" ]; then
         print_warning "Found: $container"
     fi
@@ -142,8 +142,8 @@ if [ "$ORPHAN_COUNT" -gt "$RUNNING_CONTAINERS" ] && [ "$ORPHAN_COUNT" -gt 0 ]; t
         print_info "Stopping all workspaces containers..."
         CONTAINERS_TO_STOP=$(docker ps -a --filter "name=workspaces-" -q)
         if [ -n "$CONTAINERS_TO_STOP" ]; then
-            echo "$CONTAINERS_TO_STOP" | xargs docker stop 2>/dev/null || true
-            echo "$CONTAINERS_TO_STOP" | xargs docker rm 2>/dev/null || true
+            echo "$CONTAINERS_TO_STOP" | xargs docker stop 2>/dev/null
+            echo "$CONTAINERS_TO_STOP" | xargs docker rm 2>/dev/null
             print_success "Cleanup complete"
         fi
     fi
@@ -163,7 +163,10 @@ EXTERNAL_IMAGES=(
 )
 
 if [ -n "$IMAGES_NEEDED" ]; then
-    for image in $IMAGES_NEEDED; do
+    while IFS= read -r image; do
+        # Skip empty lines
+        [ -z "$image" ] && continue
+        
         # Check if this is an external image
         IS_EXTERNAL=false
         
@@ -188,7 +191,7 @@ if [ -n "$IMAGES_NEEDED" ]; then
                 MISSING_IMAGES=$((MISSING_IMAGES + 1))
             fi
         fi
-    done
+    done <<< "$IMAGES_NEEDED"
 fi
 
 if [ "$MISSING_IMAGES" -gt 0 ]; then

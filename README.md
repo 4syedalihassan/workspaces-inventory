@@ -563,7 +563,10 @@ These occur when containers reference deleted images.
 docker compose -f docker-compose.go.yml down
 
 # Force remove any orphaned containers
-docker ps -a --filter "name=workspaces-" -q | xargs docker rm -f 2>/dev/null || true
+ORPHANED=$(docker ps -a --filter "name=workspaces-" -q)
+if [ -n "$ORPHANED" ]; then
+    echo "$ORPHANED" | xargs docker rm -f 2>/dev/null || true
+fi
 
 # Rebuild and start
 docker compose -f docker-compose.go.yml build --no-cache

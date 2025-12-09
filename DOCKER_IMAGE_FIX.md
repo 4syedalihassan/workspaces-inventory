@@ -88,7 +88,10 @@ If you encounter this error:
    docker compose -f docker-compose.go.yml down
    
    # Remove orphaned containers
-   docker ps -a --filter "name=workspaces-" -q | xargs docker rm -f 2>/dev/null || true
+   ORPHANED=$(docker ps -a --filter "name=workspaces-" -q)
+   if [ -n "$ORPHANED" ]; then
+       echo "$ORPHANED" | xargs docker rm -f 2>/dev/null || true
+   fi
    
    # Rebuild and start fresh
    docker compose -f docker-compose.go.yml build --no-cache

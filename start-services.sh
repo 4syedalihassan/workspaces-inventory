@@ -35,7 +35,7 @@ print_info() {
 }
 
 # Detect docker-compose version (v1 vs v2)
-if command -v docker &> /dev/null && docker compose version &> /dev/null 2>&1; then
+if command -v docker &> /dev/null && docker compose version &> /dev/null; then
     DOCKER_COMPOSE="docker compose"
     print_info "Using Docker Compose v2"
 elif command -v docker-compose &> /dev/null; then
@@ -108,15 +108,18 @@ done
 
 # Ask if we should clean up orphans
 ORPHAN_COUNT=$(docker ps -a --filter "name=workspaces-" -q | wc -l)
-if [ "$ORPHAN_COUNT" -gt "$RUNNING_CONTAINERS" ]; then
+if [ "$ORPHAN_COUNT" -gt "$RUNNING_CONTAINERS" ] && [ "$ORPHAN_COUNT" -gt 0 ]; then
     echo ""
     print_warning "Found $ORPHAN_COUNT containers from other deployments"
     read -p "Clean up all workspaces containers before starting? [y/N]: " cleanup
     if [[ $cleanup =~ ^[Yy]$ ]]; then
         print_info "Stopping all workspaces containers..."
-        docker stop $(docker ps -a --filter "name=workspaces-" -q) 2>/dev/null || true
-        docker rm $(docker ps -a --filter "name=workspaces-" -q) 2>/dev/null || true
-        print_success "Cleanup complete"
+        CONTAINERS_TO_STOP=$(docker ps -a --filter "name=workspaces-" -q)
+        if [ -n "$CONTAINERS_TO_STOP" ]; then
+            echo "$CONTAINERS_TO_STOP" | xargs docker stop 2>/dev/null || true
+            echo "$CONTAINERS_TO_STOP" | xargs docker rm 2>/dev/null || true
+            print_success "Cleanup complete"
+        fi
     fi
     echo ""
 fi
@@ -129,7 +132,11 @@ MISSING_IMAGES=0
 if [ -n "$IMAGES_NEEDED" ]; then
     for image in $IMAGES_NEEDED; do
         # Check if image is a build context (local build) vs external image
-        if [[ ! $image =~ ^[a-z]+\.[a-z]+/ ]] && [[ ! $image =~ ^(postgres|redis|nginx|node|golang|ubuntu|alpine): ]]; then
+        # External images have registry domains (e.g., docker.io/, gcr.io/)
+        # Or are official images with format: name:tag (postgres:15, redis:7, etc.)
+        if [[ ! $image =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/ ]] && \
+           [[ ! $image =~ ^(postgres|redis|nginx|node|golang|ubuntu|alpine): ]] && \
+           [[ ! $image =~ ^[a-z0-9-]+: ]]; then
             # This is a locally built image, check if it exists
             if ! docker image inspect "$image" &> /dev/null; then
                 print_warning "Image not found: $image"
@@ -162,7 +169,21 @@ echo ""
 # Use --remove-orphans to clean up containers from other compose files
 if [ -n "$BUILD_FLAG" ]; then
     print_info "Building images (this may take several minutes)..."
-    $DOCKER_COMPOSE -f "$COMPOSE_FILE" build --no-cache
+    
+    # Check if user wants full rebuild or incremental
+    if [ "$MISSING_IMAGES" -gt 0 ]; then
+        # Missing images require full rebuild
+        $DOCKER_COMPOSE -f "$COMPOSE_FILE" build --no-cache
+    else
+        # For optional rebuilds, allow faster incremental builds
+        print_warning "Using incremental build (faster but may not catch all changes)"
+        read -p "Force clean rebuild with --no-cache? [y/N]: " force_clean
+        if [[ $force_clean =~ ^[Yy]$ ]]; then
+            $DOCKER_COMPOSE -f "$COMPOSE_FILE" build --no-cache
+        else
+            $DOCKER_COMPOSE -f "$COMPOSE_FILE" build
+        fi
+    fi
     echo ""
 fi
 

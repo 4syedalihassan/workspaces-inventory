@@ -154,16 +154,34 @@ fi
 print_info "Checking if Docker images need to be built..."
 IMAGES_NEEDED=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" config --images 2>/dev/null || echo "")
 MISSING_IMAGES=0
-BUILD_FLAG="--build"  # Always build to ensure fresh images
+
+# Known external/official Docker images that we should not try to check
+EXTERNAL_IMAGES=(
+    "postgres" "redis" "nginx" "node" "golang" "ubuntu" "alpine"
+    "mysql" "mariadb" "mongo" "python" "java" "openjdk" "php"
+    "debian" "centos" "fedora" "busybox"
+)
 
 if [ -n "$IMAGES_NEEDED" ]; then
     for image in $IMAGES_NEEDED; do
-        # Check if image is a build context (local build) vs external image
-        # External images have registry domains (e.g., docker.io/, gcr.io/)
-        # Or are official images with format: name:tag (postgres:15, redis:7, etc.)
-        if [[ ! $image =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/ ]] && \
-           [[ ! $image =~ ^(postgres|redis|nginx|node|golang|ubuntu|alpine): ]] && \
-           [[ ! $image =~ ^[a-z0-9-]+: ]]; then
+        # Check if this is an external image
+        IS_EXTERNAL=false
+        
+        # Check for registry domain (e.g., docker.io/, gcr.io/, quay.io/)
+        if [[ $image =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/ ]]; then
+            IS_EXTERNAL=true
+        else
+            # Check if it matches known official images
+            for official in "${EXTERNAL_IMAGES[@]}"; do
+                if [[ $image =~ ^${official}: ]]; then
+                    IS_EXTERNAL=true
+                    break
+                fi
+            done
+        fi
+        
+        # Only check locally built images
+        if [ "$IS_EXTERNAL" = false ]; then
             # This is a locally built image, check if it exists
             if ! docker image inspect "$image" &> /dev/null; then
                 print_warning "Image not found: $image"

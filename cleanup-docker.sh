@@ -110,8 +110,11 @@ else
     docker rm -f workspaces-backend-lite workspaces-frontend-lite 2>/dev/null || true
     docker rm -f workspaces-inventory 2>/dev/null || true
     
-    # Also remove any stopped containers with workspaces in name
-    docker ps -a --filter "name=workspaces-" -q | xargs -r docker rm -f 2>/dev/null || true
+    # Also remove any stopped containers with workspaces in name (portable approach)
+    WORKSPACES_CONTAINERS=$(docker ps -a --filter "name=workspaces-" -q)
+    if [ -n "$WORKSPACES_CONTAINERS" ]; then
+        echo "$WORKSPACES_CONTAINERS" | xargs docker rm -f 2>/dev/null || true
+    fi
     print_success "Containers removed"
     
     print_info "Removing project networks..."
@@ -127,10 +130,17 @@ else
     fi
     
     print_info "Removing project images..."
-    # Remove images with workspaces in the name (safer pattern)
-    docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "workspaces|workspace-inventory" | xargs -r docker rmi -f 2>/dev/null || true
+    # Remove images with workspaces in the name (portable approach)
+    WORKSPACES_IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "workspaces|workspace-inventory" || true)
+    if [ -n "$WORKSPACES_IMAGES" ]; then
+        echo "$WORKSPACES_IMAGES" | xargs docker rmi -f 2>/dev/null || true
+    fi
+    
     # Remove images from the project directories (with specific context)
-    docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | awk '$1 ~ /^(workspaces-|workspace-)/ {print $2}' | xargs -r docker rmi -f 2>/dev/null || true
+    WORKSPACES_IMAGE_IDS=$(docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | awk '$1 ~ /^(workspaces-|workspace-)/ {print $2}' || true)
+    if [ -n "$WORKSPACES_IMAGE_IDS" ]; then
+        echo "$WORKSPACES_IMAGE_IDS" | xargs docker rmi -f 2>/dev/null || true
+    fi
     print_success "Images removed"
     
     print_info "Cleaning Docker builder cache..."

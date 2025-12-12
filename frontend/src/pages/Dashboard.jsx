@@ -1,20 +1,25 @@
 import { useEffect, useState } from 'react';
 import { getDashboardStats, getWorkspaces, getSyncHistory } from '../api';
 import {
-  Box,
-  Grid,
+  Row,
+  Col,
   Card,
-  CardContent,
-  Typography,
+  Statistic,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  CircularProgress
-} from '@mui/material';
+  Tag,
+  Spin,
+  Typography,
+  Space,
+} from 'antd';
+import {
+  DashboardOutlined,
+  TeamOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  LineChartOutlined,
+} from '@ant-design/icons';
+
+const { Title, Text } = Typography;
 
 function Dashboard({ setLastSync }) {
   const [stats, setStats] = useState({});
@@ -48,7 +53,7 @@ function Dashboard({ setLastSync }) {
     }
   };
 
-  const getStateBadgeColor = (state) => {
+  const getStateTagColor = (state) => {
     const stateMap = {
       'AVAILABLE': 'success',
       'PENDING': 'warning',
@@ -64,143 +69,148 @@ function Dashboard({ setLastSync }) {
     return 'warning';
   };
 
+  // Recent WorkSpaces table columns
+  const workspacesColumns = [
+    {
+      title: 'User',
+      dataIndex: 'user_name',
+      key: 'user_name',
+      render: (text) => text || '-',
+    },
+    {
+      title: 'State',
+      dataIndex: 'state',
+      key: 'state',
+      render: (state) => (
+        <Tag color={getStateTagColor(state)}>{state || '-'}</Tag>
+      ),
+    },
+    {
+      title: 'Running Mode',
+      dataIndex: 'running_mode',
+      key: 'running_mode',
+      render: (text) => text || '-',
+    },
+  ];
+
+  // Sync History table columns
+  const syncColumns = [
+    {
+      title: 'Type',
+      dataIndex: 'sync_type',
+      key: 'sync_type',
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => (
+        <Tag color={getSyncStatusColor(status)}>{status}</Tag>
+      ),
+    },
+    {
+      title: 'Records',
+      dataIndex: 'records_processed',
+      key: 'records_processed',
+      render: (val) => val || 0,
+    },
+    {
+      title: 'Time',
+      dataIndex: 'started_at',
+      key: 'started_at',
+      render: (time) => new Date(time).toLocaleString(),
+    },
+  ];
+
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Spin size="large" />
+      </div>
     );
   }
 
   return (
-    <Box>
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ borderLeft: 6, borderColor: 'secondary.main' }}>
-            <CardContent>
-              <Typography variant="h3" color="primary" fontWeight="bold">
-                {stats.total_workspaces || 0}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total WorkSpaces
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ borderLeft: 6, borderColor: 'secondary.main' }}>
-            <CardContent>
-              <Typography variant="h3" color="primary" fontWeight="bold">
-                {stats.active_workspaces || 0}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Active WorkSpaces
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ borderLeft: 6, borderColor: 'secondary.main' }}>
-            <CardContent>
-              <Typography variant="h3" color="primary" fontWeight="bold">
-                {stats.current_month_usage?.total_hours?.toFixed(1) || '0'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Usage Hours (This Month)
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ borderLeft: 6, borderColor: 'secondary.main' }}>
-            <CardContent>
-              <Typography variant="h3" color="primary" fontWeight="bold">
-                {stats.current_month_usage?.avg_hours?.toFixed(1) || '0'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Avg Hours/WorkSpace
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+    <div>
+      {/* Page Header */}
+      <div style={{ marginBottom: 24 }}>
+        <Space align="center" style={{ marginBottom: 8 }}>
+          <DashboardOutlined style={{ fontSize: 28, color: '#ff9900' }} />
+          <Title level={2} style={{ margin: 0 }}>Dashboard</Title>
+        </Space>
+        <Text type="secondary">Overview of your AWS WorkSpaces infrastructure</Text>
+      </div>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Recent WorkSpaces
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>User</TableCell>
-                      <TableCell>State</TableCell>
-                      <TableCell>Running Mode</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {recentWorkspaces.map((ws, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell>{ws.user_name || '-'}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={ws.state || '-'}
-                            color={getStateBadgeColor(ws.state)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>{ws.running_mode || '-'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
+      {/* Statistics Cards */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} style={{ borderLeft: '4px solid #ff9900' }}>
+            <Statistic
+              title="Total WorkSpaces"
+              value={stats.total_workspaces || 0}
+              prefix={<TeamOutlined />}
+              valueStyle={{ color: '#232f3e', fontWeight: 'bold' }}
+            />
           </Card>
-        </Grid>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} style={{ borderLeft: '4px solid #ff9900' }}>
+            <Statistic
+              title="Active WorkSpaces"
+              value={stats.active_workspaces || 0}
+              prefix={<CheckCircleOutlined />}
+              valueStyle={{ color: '#232f3e', fontWeight: 'bold' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} style={{ borderLeft: '4px solid #ff9900' }}>
+            <Statistic
+              title="Usage Hours (This Month)"
+              value={stats.current_month_usage?.total_hours?.toFixed(1) || '0'}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{ color: '#232f3e', fontWeight: 'bold' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} style={{ borderLeft: '4px solid #ff9900' }}>
+            <Statistic
+              title="Avg Hours/WorkSpace"
+              value={stats.current_month_usage?.avg_hours?.toFixed(1) || '0'}
+              prefix={<LineChartOutlined />}
+              valueStyle={{ color: '#232f3e', fontWeight: 'bold' }}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Sync History
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Type</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Records</TableCell>
-                      <TableCell>Time</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {syncHistory.map((sync, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell>{sync.sync_type}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={sync.status}
-                            color={getSyncStatusColor(sync.status)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>{sync.records_processed || 0}</TableCell>
-                        <TableCell>{new Date(sync.started_at).toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
+      {/* Tables Row */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card title="Recent WorkSpaces" bordered={false}>
+            <Table
+              columns={workspacesColumns}
+              dataSource={recentWorkspaces}
+              pagination={false}
+              size="small"
+              rowKey={(record, index) => index}
+            />
           </Card>
-        </Grid>
-      </Grid>
-    </Box>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card title="Sync History" bordered={false}>
+            <Table
+              columns={syncColumns}
+              dataSource={syncHistory}
+              pagination={false}
+              size="small"
+              rowKey={(record, index) => index}
+            />
+          </Card>
+        </Col>
+      </Row>
+    </div>
   );
 }
 

@@ -13,7 +13,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user by username
-    const user = User.findByUsername(username);
+    const user = await User.findByUsername(username);
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }

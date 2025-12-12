@@ -508,7 +508,16 @@ function Settings() {
           type="text"
           danger
           icon={<DeleteOutlined />}
-          onClick={() => deleteUser(record.id, record.username)}
+          onClick={() => {
+            Modal.confirm({
+              title: `Delete user "${record.username}"?`,
+              content: 'Are you sure you want to delete this user? This action cannot be undone.',
+              okText: 'Delete',
+              okType: 'danger',
+              cancelText: 'Cancel',
+              onOk: () => deleteUser(record.id, record.username),
+            });
+          }}
         />
       ),
     },

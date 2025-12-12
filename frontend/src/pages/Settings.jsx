@@ -1,28 +1,39 @@
 import { useEffect, useState } from 'react';
 import {
-  Box, Card, CardContent, Typography, Tabs, Tab, TextField, Button,
-  Table, TableBody, TableCell, TableHead, TableRow, CircularProgress,
-  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert,
-  FormControl, InputLabel, Select, MenuItem, Switch, FormControlLabel,
-  Chip, IconButton, Grid, Divider, Paper
-} from '@mui/material';
+  Card,
+  Tabs,
+  Input,
+  Button,
+  Table,
+  Select,
+  Switch,
+  Modal,
+  Row,
+  Col,
+  Space,
+  Typography,
+  Tag,
+  message,
+  Spin,
+  Form,
+} from 'antd';
 import {
-  Delete as DeleteIcon,
-  Add as AddIcon,
-  Settings as SettingsIcon,
-  Edit as EditIcon,
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon
-} from '@mui/icons-material';
+  DeleteOutlined,
+  PlusOutlined,
+  SettingOutlined,
+  EditOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+} from '@ant-design/icons';
 import { API_BASE } from '../api';
-import PageHeader from '../components/PageHeader';
+
+const { Title, Text } = Typography;
 
 function Settings() {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState('general');
   const [users, setUsers] = useState([]);
   const [awsAccounts, setAwsAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
   // User Management State
   const [showCreateUser, setShowCreateUser] = useState(false);
@@ -76,11 +87,11 @@ function Settings() {
   });
 
   useEffect(() => {
-    if (activeTab === 0) {
+    if (activeTab === 'general') {
       loadGeneralSettings();
-    } else if (activeTab === 1) {
+    } else if (activeTab === 'users') {
       loadUsers();
-    } else if (activeTab === 2) {
+    } else if (activeTab === 'integrations') {
       loadAWSAccounts();
       loadLdapSettings();
     }
@@ -102,10 +113,6 @@ function Settings() {
     return response;
   };
 
-  const showNotification = (message, severity = 'success') => {
-    setNotification({ open: true, message, severity });
-  };
-
   // General Settings Functions
   const loadGeneralSettings = async () => {
     setLoading(true);
@@ -114,7 +121,6 @@ function Settings() {
       const data = await response.json();
       const settings = data.settings || {};
 
-      // Parse SMTP settings
       const smtp = Object.values(settings).flat().filter(s => s.key.startsWith('SMTP_'));
       setSmtpSettings({
         host: smtp.find(s => s.key === 'SMTP_HOST')?.value || '',
@@ -125,7 +131,6 @@ function Settings() {
         fromName: smtp.find(s => s.key === 'SMTP_FROM_NAME')?.value || 'WorkSpaces Inventory'
       });
 
-      // Parse notification settings
       const notif = Object.values(settings).flat().filter(s => s.key.startsWith('NOTIFICATION_'));
       setNotificationSettings({
         emailEnabled: notif.find(s => s.key === 'NOTIFICATION_EMAIL_ENABLED')?.value === 'true',
@@ -133,7 +138,6 @@ function Settings() {
         slackWebhook: notif.find(s => s.key === 'NOTIFICATION_SLACK_WEBHOOK')?.value || ''
       });
 
-      // Parse DUO settings
       const duo = Object.values(settings).flat().filter(s => s.key.startsWith('DUO_'));
       setDuoSettings({
         enabled: duo.find(s => s.key === 'DUO_ENABLED')?.value === 'true',
@@ -143,7 +147,7 @@ function Settings() {
       });
     } catch (error) {
       console.error('Failed to load settings:', error);
-      showNotification('Failed to load settings', 'error');
+      message.error('Failed to load settings');
     } finally {
       setLoading(false);
     }
@@ -163,12 +167,12 @@ function Settings() {
         })
       });
       if (response.ok) {
-        showNotification('SMTP settings saved successfully', 'success');
+        message.success('SMTP settings saved successfully');
       } else {
-        showNotification('Failed to save SMTP settings', 'error');
+        message.error('Failed to save SMTP settings');
       }
     } catch (error) {
-      showNotification('Error saving SMTP settings: ' + error.message, 'error');
+      message.error('Error saving SMTP settings: ' + error.message);
     }
   };
 
@@ -183,12 +187,12 @@ function Settings() {
         })
       });
       if (response.ok) {
-        showNotification('Notification settings saved successfully', 'success');
+        message.success('Notification settings saved successfully');
       } else {
-        showNotification('Failed to save notification settings', 'error');
+        message.error('Failed to save notification settings');
       }
     } catch (error) {
-      showNotification('Error saving notification settings: ' + error.message, 'error');
+      message.error('Error saving notification settings: ' + error.message);
     }
   };
 
@@ -204,12 +208,12 @@ function Settings() {
         })
       });
       if (response.ok) {
-        showNotification('DUO settings saved successfully', 'success');
+        message.success('DUO settings saved successfully');
       } else {
-        showNotification('Failed to save DUO settings', 'error');
+        message.error('Failed to save DUO settings');
       }
     } catch (error) {
-      showNotification('Error saving DUO settings: ' + error.message, 'error');
+      message.error('Error saving DUO settings: ' + error.message);
     }
   };
 
@@ -229,7 +233,7 @@ function Settings() {
 
   const createUser = async () => {
     if (!newUser.username || !newUser.email || !newUser.password) {
-      showNotification('Please fill in all fields', 'error');
+      message.error('Please fill in all fields');
       return;
     }
     try {
@@ -240,14 +244,14 @@ function Settings() {
       if (response.ok) {
         setShowCreateUser(false);
         loadUsers();
-        showNotification('User created successfully', 'success');
+        message.success('User created successfully');
         setNewUser({ username: '', email: '', password: '', role: 'USER' });
       } else {
         const data = await response.json();
-        showNotification(data.error || 'Failed to create user', 'error');
+        message.error(data.error || 'Failed to create user');
       }
     } catch (error) {
-      showNotification('Error creating user: ' + error.message, 'error');
+      message.error('Error creating user: ' + error.message);
     }
   };
 
@@ -264,12 +268,12 @@ function Settings() {
       });
       if (response.ok) {
         loadUsers();
-        showNotification('User deleted successfully', 'success');
+        message.success('User deleted successfully');
       } else {
-        showNotification('Failed to delete user', 'error');
+        message.error('Failed to delete user');
       }
     } catch (error) {
-      showNotification('Error deleting user: ' + error.message, 'error');
+      message.error('Error deleting user: ' + error.message);
     } finally {
       setShowDeleteConfirm(false);
       setUserToDelete(null);
@@ -280,13 +284,11 @@ function Settings() {
   const loadAWSAccounts = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API endpoint when backend is ready
       const response = await apiFetch(`${API_BASE}/admin/aws-accounts`);
       if (response.ok) {
         const data = await response.json();
         setAwsAccounts(data.accounts || []);
       } else {
-        // Mock data for now
         setAwsAccounts([
           {
             id: 1,
@@ -301,7 +303,6 @@ function Settings() {
       }
     } catch (error) {
       console.error('Failed to load AWS accounts:', error);
-      // Mock data for development
       setAwsAccounts([]);
     } finally {
       setLoading(false);
@@ -310,7 +311,7 @@ function Settings() {
 
   const addAWSAccount = async () => {
     if (!newAWSAccount.name || !newAWSAccount.accessKeyId || !newAWSAccount.secretAccessKey) {
-      showNotification('Please fill in all required fields', 'error');
+      message.error('Please fill in all required fields');
       return;
     }
     try {
@@ -321,7 +322,7 @@ function Settings() {
       if (response.ok) {
         setShowAddAWS(false);
         loadAWSAccounts();
-        showNotification('AWS account added successfully', 'success');
+        message.success('AWS account added successfully');
         setNewAWSAccount({
           name: '',
           region: 'us-east-1',
@@ -331,10 +332,10 @@ function Settings() {
         });
       } else {
         const data = await response.json();
-        showNotification(data.error || 'Failed to add AWS account', 'error');
+        message.error(data.error || 'Failed to add AWS account');
       }
     } catch (error) {
-      showNotification('Error adding AWS account: ' + error.message, 'error');
+      message.error('Error adding AWS account: ' + error.message);
     }
   };
 
@@ -359,13 +360,13 @@ function Settings() {
       if (response.ok) {
         setShowEditAWS(false);
         loadAWSAccounts();
-        showNotification('AWS account updated successfully', 'success');
+        message.success('AWS account updated successfully');
       } else {
         const data = await response.json();
-        showNotification(data.error || 'Failed to update AWS account', 'error');
+        message.error(data.error || 'Failed to update AWS account');
       }
     } catch (error) {
-      showNotification('Error updating AWS account: ' + error.message, 'error');
+      message.error('Error updating AWS account: ' + error.message);
     }
   };
 
@@ -381,12 +382,12 @@ function Settings() {
       });
       if (response.ok) {
         loadAWSAccounts();
-        showNotification('AWS account deleted successfully', 'success');
+        message.success('AWS account deleted successfully');
       } else {
-        showNotification('Failed to delete AWS account', 'error');
+        message.error('Failed to delete AWS account');
       }
     } catch (error) {
-      showNotification('Error deleting AWS account: ' + error.message, 'error');
+      message.error('Error deleting AWS account: ' + error.message);
     } finally {
       setShowDeleteAWS(false);
       setSelectedAWS(null);
@@ -397,12 +398,12 @@ function Settings() {
     try {
       const response = await apiFetch(`${API_BASE}/admin/aws-accounts/${accountId}/test`);
       if (response.ok) {
-        showNotification('AWS connection test successful', 'success');
+        message.success('AWS connection test successful');
       } else {
-        showNotification('AWS connection test failed', 'error');
+        message.error('AWS connection test failed');
       }
     } catch (error) {
-      showNotification('Error testing AWS connection: ' + error.message, 'error');
+      message.error('Error testing AWS connection: ' + error.message);
     }
   };
 
@@ -421,7 +422,7 @@ function Settings() {
           serverUrl: settingsMap['ad.server_url'] || '',
           baseDN: settingsMap['ad.base_dn'] || '',
           bindUsername: settingsMap['ad.bind_username'] || '',
-          bindPassword: '', // Never load password
+          bindPassword: '',
           searchFilter: settingsMap['ad.search_filter'] || '(sAMAccountName={username})',
           syncEnabled: settingsMap['ad.sync_enabled'] === 'true'
         });
@@ -441,7 +442,6 @@ function Settings() {
         { key: 'ad.search_filter', value: ldapSettings.searchFilter }
       ];
 
-      // Only update password if it's provided
       if (ldapSettings.bindPassword) {
         settings.push({ key: 'ad.bind_password', value: ldapSettings.bindPassword });
       }
@@ -452,647 +452,641 @@ function Settings() {
       });
 
       if (response.ok) {
-        showNotification('LDAP settings saved successfully', 'success');
-        loadLdapSettings(); // Reload to clear password field
+        message.success('LDAP settings saved successfully');
+        loadLdapSettings();
       } else {
-        showNotification('Failed to save LDAP settings', 'error');
+        message.error('Failed to save LDAP settings');
       }
     } catch (error) {
-      showNotification('Error saving LDAP settings: ' + error.message, 'error');
+      message.error('Error saving LDAP settings: ' + error.message);
     }
   };
 
   const testLdapConnection = async () => {
     try {
-      // First save the settings, then test
       await saveLdapSettings();
-
-      showNotification('Testing LDAP connection...', 'info');
-      // In a real implementation, you would have a backend endpoint to test LDAP connection
-      // For now, we just show a success message
+      message.info('Testing LDAP connection...');
       setTimeout(() => {
-        showNotification('LDAP connection test - please check backend logs', 'info');
+        message.info('LDAP connection test - please check backend logs');
       }, 1000);
     } catch (error) {
-      showNotification('Error testing LDAP connection: ' + error.message, 'error');
+      message.error('Error testing LDAP connection: ' + error.message);
     }
   };
 
-  if (loading && activeTab !== 0) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const userColumns = [
+    {
+      title: 'Username',
+      dataIndex: 'username',
+      key: 'username',
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+    },
+    {
+      title: 'Role',
+      dataIndex: 'role',
+      key: 'role',
+      render: (role) => (
+        <Tag color={role === 'ADMIN' ? 'red' : 'blue'}>{role}</Tag>
+      ),
+    },
+    {
+      title: 'Last Login',
+      dataIndex: 'last_login',
+      key: 'last_login',
+      render: (date) => date ? new Date(date).toLocaleString() : 'Never',
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => (
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => {
+            Modal.confirm({
+              title: `Delete user "${record.username}"?`,
+              content: 'Are you sure you want to delete this user? This action cannot be undone.',
+              okText: 'Delete',
+              okType: 'danger',
+              cancelText: 'Cancel',
+              onOk: () => deleteUser(record.id, record.username),
+            });
+          }}
+        />
+      ),
+    },
+  ];
 
-  return (
-    <Box>
-      <PageHeader
-        title="Settings"
-        subtitle="Manage application settings, users, and integrations"
-        icon={SettingsIcon}
-      />
+  const awsColumns = [
+    {
+      title: 'Account Name',
+      dataIndex: 'name',
+      key: 'name',
+    },
+    {
+      title: 'Account ID',
+      dataIndex: 'accountId',
+      key: 'accountId',
+      render: (text) => text || '-',
+    },
+    {
+      title: 'Region',
+      dataIndex: 'region',
+      key: 'region',
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => (
+        <Tag
+          icon={status === 'connected' ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+          color={status === 'connected' ? 'success' : 'error'}
+        >
+          {status || 'unknown'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Default',
+      dataIndex: 'isDefault',
+      key: 'isDefault',
+      render: (isDefault) => isDefault ? <Tag color="blue">Default</Tag> : null,
+    },
+    {
+      title: 'Last Sync',
+      dataIndex: 'lastSync',
+      key: 'lastSync',
+      render: (date) => date ? new Date(date).toLocaleString() : 'Never',
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="text"
+            icon={<CheckCircleOutlined />}
+            onClick={() => testAWSConnection(record.id)}
+            title="Test Connection"
+          />
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={() => editAWSAccount(record)}
+          />
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => deleteAWSAccount(record)}
+          />
+        </Space>
+      ),
+    },
+  ];
 
-      <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tab label="General" />
-        <Tab label="Users" />
-        <Tab label="Integrations" />
-      </Tabs>
-
-      {/* General Tab */}
-      {activeTab === 0 && (
-        <Box>
+  const tabItems = [
+    {
+      key: 'general',
+      label: 'General',
+      children: loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+          <Spin size="large" />
+        </div>
+      ) : (
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
           {/* SMTP Settings */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Email (SMTP) Configuration</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Configure SMTP settings for sending email notifications
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="SMTP Host"
+          <Card title="Email (SMTP) Configuration" bordered={false}>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+              Configure SMTP settings for sending email notifications
+            </Text>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>SMTP Host</Text>
+                  <Input
+                    placeholder="smtp.gmail.com"
                     value={smtpSettings.host}
                     onChange={(e) => setSmtpSettings({...smtpSettings, host: e.target.value})}
-                    placeholder="smtp.gmail.com"
                   />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="SMTP Port"
+                </div>
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>SMTP Port</Text>
+                  <Input
                     type="number"
                     value={smtpSettings.port}
                     onChange={(e) => setSmtpSettings({...smtpSettings, port: e.target.value})}
                   />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Username"
+                </div>
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>Username</Text>
+                  <Input
                     value={smtpSettings.username}
                     onChange={(e) => setSmtpSettings({...smtpSettings, username: e.target.value})}
                   />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Password"
-                    type="password"
+                </div>
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>Password</Text>
+                  <Input.Password
                     value={smtpSettings.password}
                     onChange={(e) => setSmtpSettings({...smtpSettings, password: e.target.value})}
                   />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="From Email"
+                </div>
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>From Email</Text>
+                  <Input
+                    placeholder="noreply@company.com"
                     value={smtpSettings.fromEmail}
                     onChange={(e) => setSmtpSettings({...smtpSettings, fromEmail: e.target.value})}
-                    placeholder="noreply@company.com"
                   />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="From Name"
+                </div>
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>From Name</Text>
+                  <Input
                     value={smtpSettings.fromName}
                     onChange={(e) => setSmtpSettings({...smtpSettings, fromName: e.target.value})}
                   />
-                </Grid>
-              </Grid>
-              <Box sx={{ mt: 3 }}>
-                <Button variant="contained" onClick={saveSMTPSettings}>
-                  Save SMTP Settings
-                </Button>
-              </Box>
-            </CardContent>
+                </div>
+              </Col>
+            </Row>
+            <div style={{ marginTop: 16 }}>
+              <Button type="primary" onClick={saveSMTPSettings}>
+                Save SMTP Settings
+              </Button>
+            </div>
           </Card>
 
           {/* Notification Settings */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Notification Settings</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Configure when and how to send notifications
-              </Typography>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={notificationSettings.emailEnabled}
-                    onChange={(e) => setNotificationSettings({...notificationSettings, emailEnabled: e.target.checked})}
-                  />
-                }
-                label="Enable Email Notifications"
-              />
-              <br />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={notificationSettings.slackEnabled}
-                    onChange={(e) => setNotificationSettings({...notificationSettings, slackEnabled: e.target.checked})}
-                  />
-                }
-                label="Enable Slack Notifications"
-              />
+          <Card title="Notification Settings" bordered={false}>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+              Configure when and how to send notifications
+            </Text>
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <div>
+                <Switch
+                  checked={notificationSettings.emailEnabled}
+                  onChange={(checked) => setNotificationSettings({...notificationSettings, emailEnabled: checked})}
+                />
+                <Text style={{ marginLeft: 8 }}>Enable Email Notifications</Text>
+              </div>
+              <div>
+                <Switch
+                  checked={notificationSettings.slackEnabled}
+                  onChange={(checked) => setNotificationSettings({...notificationSettings, slackEnabled: checked})}
+                />
+                <Text style={{ marginLeft: 8 }}>Enable Slack Notifications</Text>
+              </div>
               {notificationSettings.slackEnabled && (
-                <TextField
-                  fullWidth
-                  label="Slack Webhook URL"
+                <Input
+                  placeholder="https://hooks.slack.com/services/..."
                   value={notificationSettings.slackWebhook}
                   onChange={(e) => setNotificationSettings({...notificationSettings, slackWebhook: e.target.value})}
-                  sx={{ mt: 2 }}
-                  placeholder="https://hooks.slack.com/services/..."
+                  style={{ marginTop: 8 }}
                 />
               )}
-              <Box sx={{ mt: 3 }}>
-                <Button variant="contained" onClick={saveNotificationSettings}>
-                  Save Notification Settings
-                </Button>
-              </Box>
-            </CardContent>
+              <Button type="primary" onClick={saveNotificationSettings}>
+                Save Notification Settings
+              </Button>
+            </Space>
           </Card>
 
           {/* DUO MFA Settings */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>DUO Multi-Factor Authentication</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Configure DUO Security for two-factor authentication
-              </Typography>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={duoSettings.enabled}
-                    onChange={(e) => setDuoSettings({...duoSettings, enabled: e.target.checked})}
-                  />
-                }
-                label="Enable DUO MFA"
-              />
+          <Card title="DUO Multi-Factor Authentication" bordered={false}>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+              Configure DUO Security for two-factor authentication
+            </Text>
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <div>
+                <Switch
+                  checked={duoSettings.enabled}
+                  onChange={(checked) => setDuoSettings({...duoSettings, enabled: checked})}
+                />
+                <Text style={{ marginLeft: 8 }}>Enable DUO MFA</Text>
+              </div>
               {duoSettings.enabled && (
-                <Grid container spacing={2} sx={{ mt: 1 }}>
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      fullWidth
-                      label="Integration Key"
-                      value={duoSettings.integrationKey}
-                      onChange={(e) => setDuoSettings({...duoSettings, integrationKey: e.target.value})}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      fullWidth
-                      label="Secret Key"
-                      type="password"
-                      value={duoSettings.secretKey}
-                      onChange={(e) => setDuoSettings({...duoSettings, secretKey: e.target.value})}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      fullWidth
-                      label="API Hostname"
-                      value={duoSettings.apiHostname}
-                      onChange={(e) => setDuoSettings({...duoSettings, apiHostname: e.target.value})}
-                      placeholder="api-xxxxxxxx.duosecurity.com"
-                    />
-                  </Grid>
-                </Grid>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} md={8}>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>Integration Key</Text>
+                      <Input
+                        value={duoSettings.integrationKey}
+                        onChange={(e) => setDuoSettings({...duoSettings, integrationKey: e.target.value})}
+                      />
+                    </div>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>Secret Key</Text>
+                      <Input.Password
+                        value={duoSettings.secretKey}
+                        onChange={(e) => setDuoSettings({...duoSettings, secretKey: e.target.value})}
+                      />
+                    </div>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>API Hostname</Text>
+                      <Input
+                        placeholder="api-xxxxxxxx.duosecurity.com"
+                        value={duoSettings.apiHostname}
+                        onChange={(e) => setDuoSettings({...duoSettings, apiHostname: e.target.value})}
+                      />
+                    </div>
+                  </Col>
+                </Row>
               )}
-              <Box sx={{ mt: 3 }}>
-                <Button variant="contained" onClick={saveDUOSettings}>
-                  Save DUO Settings
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Box>
-      )}
-
-      {/* Users Tab */}
-      {activeTab === 1 && (
-        <Card>
-          <CardContent>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h6">User Management</Typography>
-              <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowCreateUser(true)}>
-                Create User
+              <Button type="primary" onClick={saveDUOSettings}>
+                Save DUO Settings
               </Button>
-            </Box>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Username</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Role</TableCell>
-                  <TableCell>Last Login</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {users.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">No users found</TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Chip label={user.role} color={user.role === 'ADMIN' ? 'error' : 'primary'} size="small" />
-                      </TableCell>
-                      <TableCell>{user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</TableCell>
-                      <TableCell>
-                        <IconButton size="small" color="error" onClick={() => deleteUser(user.id, user.username)}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
+            </Space>
+          </Card>
+        </Space>
+      ),
+    },
+    {
+      key: 'users',
+      label: 'Users',
+      children: (
+        <Card>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <Title level={5} style={{ margin: 0 }}>User Management</Title>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setShowCreateUser(true)}
+            >
+              Create User
+            </Button>
+          </div>
+          <Table
+            columns={userColumns}
+            dataSource={users}
+            loading={loading}
+            rowKey="id"
+            size="small"
+          />
         </Card>
-      )}
-
-      {/* Integrations Tab */}
-      {activeTab === 2 && (
-        <>
+      ),
+    },
+    {
+      key: 'integrations',
+      label: 'Integrations',
+      children: (
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          {/* AWS Accounts */}
           <Card>
-            <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Box>
-                  <Typography variant="h6">AWS Account Integrations</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Manage multiple AWS accounts for WorkSpaces monitoring
-                  </Typography>
-                </Box>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddAWS(true)}>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <Title level={5} style={{ margin: 0 }}>AWS Account Integrations</Title>
+                  <Text type="secondary">Manage multiple AWS accounts for WorkSpaces monitoring</Text>
+                </div>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => setShowAddAWS(true)}
+                >
                   Add AWS Account
                 </Button>
-              </Box>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Account Name</TableCell>
-                  <TableCell>Account ID</TableCell>
-                  <TableCell>Region</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Default</TableCell>
-                  <TableCell>Last Sync</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {awsAccounts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center">
-                      No AWS accounts configured. Click "Add AWS Account" to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  awsAccounts.map((account) => (
-                    <TableRow key={account.id}>
-                      <TableCell>{account.name}</TableCell>
-                      <TableCell>{account.accountId || '-'}</TableCell>
-                      <TableCell>{account.region}</TableCell>
-                      <TableCell>
-                        <Chip
-                          icon={account.status === 'connected' ? <CheckCircleIcon /> : <ErrorIcon />}
-                          label={account.status || 'unknown'}
-                          color={account.status === 'connected' ? 'success' : 'error'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {account.isDefault && <Chip label="Default" color="primary" size="small" />}
-                      </TableCell>
-                      <TableCell>
-                        {account.lastSync ? new Date(account.lastSync).toLocaleString() : 'Never'}
-                      </TableCell>
-                      <TableCell>
-                        <IconButton size="small" onClick={() => testAWSConnection(account.id)} title="Test Connection">
-                          <CheckCircleIcon />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => editAWSAccount(account)}>
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton size="small" color="error" onClick={() => deleteAWSAccount(account)}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+              </div>
+            </div>
+            <Table
+              columns={awsColumns}
+              dataSource={awsAccounts}
+              loading={loading}
+              rowKey="id"
+              size="small"
+            />
+          </Card>
 
-        {/* LDAP Integration */}
-        <Card sx={{ mt: 3 }}>
-          <CardContent>
-            <Box mb={3}>
-              <Typography variant="h6">LDAP / Active Directory Integration</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Connect to your Active Directory or LDAP server to sync user information
-              </Typography>
-            </Box>
-
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="LDAP Server URL"
-                  value={ldapSettings.serverUrl}
-                  onChange={(e) => setLdapSettings({...ldapSettings, serverUrl: e.target.value})}
-                  placeholder="ldap://dc.example.com:389"
-                  helperText="LDAP or LDAPS URL (e.g., ldap://dc.example.com or ldaps://dc.example.com:636)"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Base DN"
-                  value={ldapSettings.baseDN}
-                  onChange={(e) => setLdapSettings({...ldapSettings, baseDN: e.target.value})}
-                  placeholder="DC=example,DC=com"
-                  helperText="Base Distinguished Name for user searches"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Bind Username"
-                  value={ldapSettings.bindUsername}
-                  onChange={(e) => setLdapSettings({...ldapSettings, bindUsername: e.target.value})}
-                  placeholder="CN=admin,DC=example,DC=com"
-                  helperText="Username for LDAP bind (full DN)"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="password"
-                  label="Bind Password"
-                  value={ldapSettings.bindPassword}
-                  onChange={(e) => setLdapSettings({...ldapSettings, bindPassword: e.target.value})}
-                  placeholder="Leave blank to keep existing"
-                  helperText="Password for LDAP bind"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Search Filter"
-                  value={ldapSettings.searchFilter}
-                  onChange={(e) => setLdapSettings({...ldapSettings, searchFilter: e.target.value})}
-                  placeholder="(sAMAccountName={username})"
-                  helperText="LDAP search filter template (use {username} as placeholder)"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={ldapSettings.syncEnabled}
-                      onChange={(e) => setLdapSettings({...ldapSettings, syncEnabled: e.target.checked})}
-                    />
-                  }
-                  label="Enable automatic LDAP user synchronization"
-                />
-                <Typography variant="caption" display="block" color="text.secondary" sx={{ ml: 4, mt: -1 }}>
-                  When enabled, user information will be synced from LDAP during workspace sync
-                </Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Box display="flex" gap={2}>
-                  <Button
-                    variant="contained"
-                    onClick={saveLdapSettings}
-                  >
+          {/* LDAP Integration */}
+          <Card title="LDAP / Active Directory Integration" bordered={false}>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+              Connect to your Active Directory or LDAP server to sync user information
+            </Text>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>LDAP Server URL</Text>
+                  <Input
+                    placeholder="ldap://dc.example.com:389"
+                    value={ldapSettings.serverUrl}
+                    onChange={(e) => setLdapSettings({...ldapSettings, serverUrl: e.target.value})}
+                  />
+                  <Text type="secondary" style={{ fontSize: '11px' }}>LDAP or LDAPS URL</Text>
+                </div>
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>Base DN</Text>
+                  <Input
+                    placeholder="DC=example,DC=com"
+                    value={ldapSettings.baseDN}
+                    onChange={(e) => setLdapSettings({...ldapSettings, baseDN: e.target.value})}
+                  />
+                  <Text type="secondary" style={{ fontSize: '11px' }}>Base Distinguished Name for user searches</Text>
+                </div>
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>Bind Username</Text>
+                  <Input
+                    placeholder="CN=admin,DC=example,DC=com"
+                    value={ldapSettings.bindUsername}
+                    onChange={(e) => setLdapSettings({...ldapSettings, bindUsername: e.target.value})}
+                  />
+                  <Text type="secondary" style={{ fontSize: '11px' }}>Username for LDAP bind (full DN)</Text>
+                </div>
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>Bind Password</Text>
+                  <Input.Password
+                    placeholder="Leave blank to keep existing"
+                    value={ldapSettings.bindPassword}
+                    onChange={(e) => setLdapSettings({...ldapSettings, bindPassword: e.target.value})}
+                  />
+                  <Text type="secondary" style={{ fontSize: '11px' }}>Password for LDAP bind</Text>
+                </div>
+              </Col>
+              <Col xs={24}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>Search Filter</Text>
+                  <Input
+                    placeholder="(sAMAccountName={username})"
+                    value={ldapSettings.searchFilter}
+                    onChange={(e) => setLdapSettings({...ldapSettings, searchFilter: e.target.value})}
+                  />
+                  <Text type="secondary" style={{ fontSize: '11px' }}>LDAP search filter template (use {'{username}'} as placeholder)</Text>
+                </div>
+              </Col>
+              <Col xs={24}>
+                <div style={{ marginBottom: 16 }}>
+                  <Switch
+                    checked={ldapSettings.syncEnabled}
+                    onChange={(checked) => setLdapSettings({...ldapSettings, syncEnabled: checked})}
+                  />
+                  <Text style={{ marginLeft: 8 }}>Enable automatic LDAP user synchronization</Text>
+                  <div style={{ marginLeft: 32, marginTop: 4 }}>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                      When enabled, user information will be synced from LDAP during workspace sync
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+              <Col xs={24}>
+                <Space>
+                  <Button type="primary" onClick={saveLdapSettings}>
                     Save LDAP Settings
                   </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={testLdapConnection}
-                  >
+                  <Button onClick={testLdapConnection}>
                     Test Connection
                   </Button>
-                </Box>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-        </>
-      )}
+                </Space>
+              </Col>
+            </Row>
+          </Card>
+        </Space>
+      ),
+    },
+  ];
 
-      {/* Create User Dialog */}
-      <Dialog open={showCreateUser} onClose={() => setShowCreateUser(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create New User</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Username"
+  if (loading && activeTab !== 'general') {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Page Header */}
+      <div style={{ marginBottom: 24 }}>
+        <Space align="center" style={{ marginBottom: 8 }}>
+          <SettingOutlined style={{ fontSize: 28, color: '#ff9900' }} />
+          <Title level={2} style={{ margin: 0 }}>Settings</Title>
+        </Space>
+        <Text type="secondary">Manage application settings, users, and integrations</Text>
+      </div>
+
+      {/* Tabs */}
+      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
+
+      {/* Create User Modal */}
+      <Modal
+        title="Create New User"
+        open={showCreateUser}
+        onOk={createUser}
+        onCancel={() => setShowCreateUser(false)}
+      >
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Input
+            placeholder="Username"
             value={newUser.username}
             onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-            sx={{ mt: 2, mb: 2 }}
           />
-          <TextField
-            fullWidth
-            label="Email"
+          <Input
+            placeholder="Email"
             type="email"
             value={newUser.email}
             onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-            sx={{ mb: 2 }}
           />
-          <TextField
-            fullWidth
-            label="Password"
-            type="password"
+          <Input.Password
+            placeholder="Password"
             value={newUser.password}
             onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-            sx={{ mb: 2 }}
           />
-          <FormControl fullWidth>
-            <InputLabel>Role</InputLabel>
-            <Select value={newUser.role} label="Role" onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
-              <MenuItem value="USER">User</MenuItem>
-              <MenuItem value="ADMIN">Admin</MenuItem>
-            </Select>
-          </FormControl>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowCreateUser(false)}>Cancel</Button>
-          <Button onClick={createUser} variant="contained">Create</Button>
-        </DialogActions>
-      </Dialog>
+          <Select
+            style={{ width: '100%' }}
+            value={newUser.role}
+            onChange={(val) => setNewUser({...newUser, role: val})}
+          >
+            <Select.Option value="USER">User</Select.Option>
+            <Select.Option value="ADMIN">Admin</Select.Option>
+          </Select>
+        </Space>
+      </Modal>
 
-      {/* Delete User Dialog */}
-      <Dialog open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to delete user "{userToDelete?.username}"?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
-          <Button onClick={confirmDeleteUser} variant="contained" color="error">Delete</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Add AWS Account Dialog */}
-      <Dialog open={showAddAWS} onClose={() => setShowAddAWS(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add AWS Account</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Account Name"
-            value={newAWSAccount.name}
-            onChange={(e) => setNewAWSAccount({...newAWSAccount, name: e.target.value})}
-            sx={{ mt: 2, mb: 2 }}
-            placeholder="Production Account"
-          />
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Region</InputLabel>
-            <Select
-              value={newAWSAccount.region}
-              label="Region"
-              onChange={(e) => setNewAWSAccount({...newAWSAccount, region: e.target.value})}
-            >
-              <MenuItem value="us-east-1">US East (N. Virginia)</MenuItem>
-              <MenuItem value="us-east-2">US East (Ohio)</MenuItem>
-              <MenuItem value="us-west-1">US West (N. California)</MenuItem>
-              <MenuItem value="us-west-2">US West (Oregon)</MenuItem>
-              <MenuItem value="eu-west-1">EU (Ireland)</MenuItem>
-              <MenuItem value="eu-central-1">EU (Frankfurt)</MenuItem>
-              <MenuItem value="ap-southeast-1">Asia Pacific (Singapore)</MenuItem>
-              <MenuItem value="ap-northeast-1">Asia Pacific (Tokyo)</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            fullWidth
-            label="Access Key ID"
-            value={newAWSAccount.accessKeyId}
-            onChange={(e) => setNewAWSAccount({...newAWSAccount, accessKeyId: e.target.value})}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Secret Access Key"
-            type="password"
-            value={newAWSAccount.secretAccessKey}
-            onChange={(e) => setNewAWSAccount({...newAWSAccount, secretAccessKey: e.target.value})}
-            sx={{ mb: 2 }}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={newAWSAccount.isDefault}
-                onChange={(e) => setNewAWSAccount({...newAWSAccount, isDefault: e.target.checked})}
-              />
-            }
-            label="Set as default account"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowAddAWS(false)}>Cancel</Button>
-          <Button onClick={addAWSAccount} variant="contained">Add Account</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Edit AWS Account Dialog */}
-      <Dialog open={showEditAWS} onClose={() => setShowEditAWS(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit AWS Account</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Account Name"
-            value={newAWSAccount.name}
-            onChange={(e) => setNewAWSAccount({...newAWSAccount, name: e.target.value})}
-            sx={{ mt: 2, mb: 2 }}
-          />
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Region</InputLabel>
-            <Select
-              value={newAWSAccount.region}
-              label="Region"
-              onChange={(e) => setNewAWSAccount({...newAWSAccount, region: e.target.value})}
-            >
-              <MenuItem value="us-east-1">US East (N. Virginia)</MenuItem>
-              <MenuItem value="us-east-2">US East (Ohio)</MenuItem>
-              <MenuItem value="us-west-1">US West (N. California)</MenuItem>
-              <MenuItem value="us-west-2">US West (Oregon)</MenuItem>
-              <MenuItem value="eu-west-1">EU (Ireland)</MenuItem>
-              <MenuItem value="eu-central-1">EU (Frankfurt)</MenuItem>
-              <MenuItem value="ap-southeast-1">Asia Pacific (Singapore)</MenuItem>
-              <MenuItem value="ap-northeast-1">Asia Pacific (Tokyo)</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            fullWidth
-            label="Access Key ID (leave blank to keep existing)"
-            value={newAWSAccount.accessKeyId}
-            onChange={(e) => setNewAWSAccount({...newAWSAccount, accessKeyId: e.target.value})}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Secret Access Key (leave blank to keep existing)"
-            type="password"
-            value={newAWSAccount.secretAccessKey}
-            onChange={(e) => setNewAWSAccount({...newAWSAccount, secretAccessKey: e.target.value})}
-            sx={{ mb: 2 }}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={newAWSAccount.isDefault}
-                onChange={(e) => setNewAWSAccount({...newAWSAccount, isDefault: e.target.checked})}
-              />
-            }
-            label="Set as default account"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowEditAWS(false)}>Cancel</Button>
-          <Button onClick={updateAWSAccount} variant="contained">Update Account</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Delete AWS Account Dialog */}
-      <Dialog open={showDeleteAWS} onClose={() => setShowDeleteAWS(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete AWS account "{selectedAWS?.name}"?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            This will stop syncing data from this AWS account.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowDeleteAWS(false)}>Cancel</Button>
-          <Button onClick={confirmDeleteAWS} variant="contained" color="error">Delete</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Notification Snackbar */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={5000}
-        onClose={() => setNotification({...notification, open: false})}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      {/* Delete User Confirmation */}
+      <Modal
+        title="Confirm Delete"
+        open={showDeleteConfirm}
+        onOk={confirmDeleteUser}
+        onCancel={() => setShowDeleteConfirm(false)}
+        okText="Delete"
+        okButtonProps={{ danger: true }}
       >
-        <Alert onClose={() => setNotification({...notification, open: false})} severity={notification.severity}>
-          {notification.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+        <Text>Are you sure you want to delete user "{userToDelete?.username}"?</Text>
+      </Modal>
+
+      {/* Add AWS Account Modal */}
+      <Modal
+        title="Add AWS Account"
+        open={showAddAWS}
+        onOk={addAWSAccount}
+        onCancel={() => setShowAddAWS(false)}
+        width={600}
+      >
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Input
+            placeholder="Account Name (e.g., Production Account)"
+            value={newAWSAccount.name}
+            onChange={(e) => setNewAWSAccount({...newAWSAccount, name: e.target.value})}
+          />
+          <Select
+            style={{ width: '100%' }}
+            value={newAWSAccount.region}
+            onChange={(val) => setNewAWSAccount({...newAWSAccount, region: val})}
+          >
+            <Select.Option value="us-east-1">US East (N. Virginia)</Select.Option>
+            <Select.Option value="us-east-2">US East (Ohio)</Select.Option>
+            <Select.Option value="us-west-1">US West (N. California)</Select.Option>
+            <Select.Option value="us-west-2">US West (Oregon)</Select.Option>
+            <Select.Option value="eu-west-1">EU (Ireland)</Select.Option>
+            <Select.Option value="eu-central-1">EU (Frankfurt)</Select.Option>
+            <Select.Option value="ap-southeast-1">Asia Pacific (Singapore)</Select.Option>
+            <Select.Option value="ap-northeast-1">Asia Pacific (Tokyo)</Select.Option>
+          </Select>
+          <Input
+            placeholder="Access Key ID"
+            value={newAWSAccount.accessKeyId}
+            onChange={(e) => setNewAWSAccount({...newAWSAccount, accessKeyId: e.target.value})}
+          />
+          <Input.Password
+            placeholder="Secret Access Key"
+            value={newAWSAccount.secretAccessKey}
+            onChange={(e) => setNewAWSAccount({...newAWSAccount, secretAccessKey: e.target.value})}
+          />
+          <div>
+            <Switch
+              checked={newAWSAccount.isDefault}
+              onChange={(checked) => setNewAWSAccount({...newAWSAccount, isDefault: checked})}
+            />
+            <Text style={{ marginLeft: 8 }}>Set as default account</Text>
+          </div>
+        </Space>
+      </Modal>
+
+      {/* Edit AWS Account Modal */}
+      <Modal
+        title="Edit AWS Account"
+        open={showEditAWS}
+        onOk={updateAWSAccount}
+        onCancel={() => setShowEditAWS(false)}
+        width={600}
+      >
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Input
+            placeholder="Account Name"
+            value={newAWSAccount.name}
+            onChange={(e) => setNewAWSAccount({...newAWSAccount, name: e.target.value})}
+          />
+          <Select
+            style={{ width: '100%' }}
+            value={newAWSAccount.region}
+            onChange={(val) => setNewAWSAccount({...newAWSAccount, region: val})}
+          >
+            <Select.Option value="us-east-1">US East (N. Virginia)</Select.Option>
+            <Select.Option value="us-east-2">US East (Ohio)</Select.Option>
+            <Select.Option value="us-west-1">US West (N. California)</Select.Option>
+            <Select.Option value="us-west-2">US West (Oregon)</Select.Option>
+            <Select.Option value="eu-west-1">EU (Ireland)</Select.Option>
+            <Select.Option value="eu-central-1">EU (Frankfurt)</Select.Option>
+            <Select.Option value="ap-southeast-1">Asia Pacific (Singapore)</Select.Option>
+            <Select.Option value="ap-northeast-1">Asia Pacific (Tokyo)</Select.Option>
+          </Select>
+          <Input
+            placeholder="Access Key ID (leave blank to keep existing)"
+            value={newAWSAccount.accessKeyId}
+            onChange={(e) => setNewAWSAccount({...newAWSAccount, accessKeyId: e.target.value})}
+          />
+          <Input.Password
+            placeholder="Secret Access Key (leave blank to keep existing)"
+            value={newAWSAccount.secretAccessKey}
+            onChange={(e) => setNewAWSAccount({...newAWSAccount, secretAccessKey: e.target.value})}
+          />
+          <div>
+            <Switch
+              checked={newAWSAccount.isDefault}
+              onChange={(checked) => setNewAWSAccount({...newAWSAccount, isDefault: checked})}
+            />
+            <Text style={{ marginLeft: 8 }}>Set as default account</Text>
+          </div>
+        </Space>
+      </Modal>
+
+      {/* Delete AWS Account Confirmation */}
+      <Modal
+        title="Confirm Delete"
+        open={showDeleteAWS}
+        onOk={confirmDeleteAWS}
+        onCancel={() => setShowDeleteAWS(false)}
+        okText="Delete"
+        okButtonProps={{ danger: true }}
+      >
+        <Space direction="vertical">
+          <Text>Are you sure you want to delete AWS account "{selectedAWS?.name}"?</Text>
+          <Text type="secondary">This will stop syncing data from this AWS account.</Text>
+        </Space>
+      </Modal>
+    </div>
   );
 }
 

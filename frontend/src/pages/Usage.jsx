@@ -112,7 +112,7 @@ function Usage() {
       title: 'Usage Hours',
       dataIndex: 'usage_hours',
       key: 'usage_hours',
-      render: (val) => val?.toFixed(2) || '0.00',
+      render: (val) => (val || 0).toFixed(2),
     },
   ];
 

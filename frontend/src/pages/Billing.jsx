@@ -119,7 +119,7 @@ function Billing() {
       title: 'Amount',
       dataIndex: 'amount',
       key: 'amount',
-      render: (val) => `$${val?.toFixed(2) || '0.00'}`,
+      render: (val) => `$${(val || 0).toFixed(2)}`,
     },
     {
       title: 'Currency',

@@ -23,14 +23,17 @@ class User {
     // Create default admin user if no users exist
     const count = db.prepare('SELECT COUNT(*) as count FROM users').get();
     if (count.count === 0) {
+      const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@2024';
       console.log('Creating default admin user...');
+      console.warn('WARNING: Using default admin credentials. Change the password immediately after first login!');
       this.create({
         username: 'admin',
         email: 'admin@workspaces-inventory.local',
-        password: 'Admin@2024',
+        password: defaultPassword,
         role: 'ADMIN'
       });
-      console.log('Default admin user created: username=admin, password=Admin@2024');
+      console.log('Default admin user created: username=admin, password=******');
+      console.log('IMPORTANT: Change the admin password immediately!');
     }
   }
 

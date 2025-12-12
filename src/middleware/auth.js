@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const config = require('../config');
 
 // Secret key for JWT (must be set in environment variable)
 if (!process.env.JWT_SECRET) {

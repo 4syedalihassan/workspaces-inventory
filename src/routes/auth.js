@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const { generateToken, authenticateToken, verifyToken } = require('../middleware/auth');
+const { generateToken, authenticateToken } = require('../middleware/auth');
 
 // Login endpoint
 router.post('/login', async (req, res) => {

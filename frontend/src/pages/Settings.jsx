@@ -28,7 +28,6 @@ import {
 import { API_BASE } from '../api';
 
 const { Title, Text } = Typography;
-const { TextArea } = Input;
 
 function Settings() {
   const [activeTab, setActiveTab] = useState('general');

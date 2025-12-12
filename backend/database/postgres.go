@@ -294,9 +294,79 @@ func RunMigrations() error {
 					('duo.api_hostname', '', false, 'duo', 'DUO API Hostname'),
 					('sync.auto_sync_enabled', 'false', false, 'sync', 'Enable automatic synchronization'),
 					('sync.interval_minutes', '60', false, 'sync', 'Sync interval in minutes'),
+					('ad.domain', '', false, 'active_directory', 'Active Directory Domain'),
+					('ad.server_url', '', false, 'active_directory', 'AD Server URL (ldap://dc.example.com)'),
+					('ad.base_dn', '', false, 'active_directory', 'Base DN (DC=example,DC=com)'),
+					('ad.bind_username', '', false, 'active_directory', 'AD Bind Username'),
+					('ad.bind_password', '', true, 'active_directory', 'AD Bind Password'),
+					('ad.sync_enabled', 'false', false, 'active_directory', 'Enable AD user sync'),
+					('notifications.email_enabled', 'false', false, 'notifications', 'Enable email notifications'),
+					('notifications.smtp_host', '', false, 'notifications', 'SMTP Server Host'),
+					('notifications.smtp_port', '587', false, 'notifications', 'SMTP Server Port'),
+					('notifications.smtp_username', '', false, 'notifications', 'SMTP Username'),
+					('notifications.smtp_password', '', true, 'notifications', 'SMTP Password'),
+					('notifications.from_email', '', false, 'notifications', 'From Email Address'),
 					('app.company_name', 'WorkSpaces Inventory', false, 'general', 'Company name'),
 					('app.default_timezone', 'UTC', false, 'general', 'Default timezone')
 				ON CONFLICT (key) DO NOTHING;
+			`,
+		},
+		{
+			version: 8,
+			sql: `
+				CREATE TABLE IF NOT EXISTS notifications (
+					id SERIAL PRIMARY KEY,
+					event_type VARCHAR(50) NOT NULL,
+					workspace_id VARCHAR(255),
+					workspace_user VARCHAR(255),
+					title VARCHAR(255) NOT NULL,
+					message TEXT NOT NULL,
+					severity VARCHAR(20) DEFAULT 'info',
+					read BOOLEAN DEFAULT false,
+					created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+					metadata JSONB
+				);
+
+				CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+				CREATE INDEX IF NOT EXISTS idx_notifications_workspace_id ON notifications(workspace_id);
+				CREATE INDEX IF NOT EXISTS idx_notifications_event_type ON notifications(event_type);
+				CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+
+				-- Notification preferences table
+				CREATE TABLE IF NOT EXISTS notification_preferences (
+					id SERIAL PRIMARY KEY,
+					user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+					email_enabled BOOLEAN DEFAULT true,
+					notify_on_create BOOLEAN DEFAULT true,
+					notify_on_terminate BOOLEAN DEFAULT true,
+					notify_on_modify BOOLEAN DEFAULT true,
+					notify_on_state_change BOOLEAN DEFAULT true,
+					created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+					updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+					UNIQUE(user_id)
+				);
+			`,
+		},
+		{
+			version: 9,
+			sql: `
+				-- Add Active Directory sync fields to workspaces
+				ALTER TABLE workspaces
+					ADD COLUMN IF NOT EXISTS ad_full_name VARCHAR(255),
+					ADD COLUMN IF NOT EXISTS ad_email VARCHAR(255),
+					ADD COLUMN IF NOT EXISTS ad_department VARCHAR(255),
+					ADD COLUMN IF NOT EXISTS ad_job_title VARCHAR(255),
+					ADD COLUMN IF NOT EXISTS ad_manager VARCHAR(255),
+					ADD COLUMN IF NOT EXISTS ad_last_sync TIMESTAMP;
+
+				CREATE INDEX IF NOT EXISTS idx_workspaces_ad_full_name ON workspaces(ad_full_name);
+				CREATE INDEX IF NOT EXISTS idx_workspaces_ad_email ON workspaces(ad_email);
+				CREATE INDEX IF NOT EXISTS idx_workspaces_ad_department ON workspaces(ad_department);
+
+				-- Add display tracking fields
+				ALTER TABLE workspaces
+					ADD COLUMN IF NOT EXISTS previous_state VARCHAR(50),
+					ADD COLUMN IF NOT EXISTS state_changed_at TIMESTAMP;
 			`,
 		},
 	}

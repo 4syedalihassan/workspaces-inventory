@@ -42,13 +42,64 @@ func (h *SyncHandler) runSync(syncID int, syncType string) {
 	defer cancel()
 
 	awsService := &services.AWSService{DB: h.DB}
+	notificationService := &services.NotificationService{DB: h.DB}
 
 	var recordsProcessed int
 	var err error
 
 	switch syncType {
-	case "workspaces", "all":
+	case "workspaces":
 		recordsProcessed, err = awsService.SyncWorkSpaces(ctx)
+	case "cloudtrail":
+		recordsProcessed, err = awsService.SyncCloudTrail(ctx)
+	case "billing":
+		recordsProcessed, err = awsService.SyncBillingData(ctx)
+	case "usage":
+		recordsProcessed, err = awsService.CalculateUsageHours(ctx)
+	case "active_directory", "ad":
+		recordsProcessed, err = awsService.SyncActiveDirectoryUsers(ctx)
+	case "all":
+		// Run all syncs sequentially
+		var totalRecords int
+		var lastErr error
+
+		// Sync WorkSpaces
+		if count, e := awsService.SyncWorkSpaces(ctx); e != nil {
+			lastErr = e
+		} else {
+			totalRecords += count
+		}
+
+		// Sync CloudTrail
+		if count, e := awsService.SyncCloudTrail(ctx); e != nil {
+			lastErr = e
+		} else {
+			totalRecords += count
+		}
+
+		// Sync Billing
+		if count, e := awsService.SyncBillingData(ctx); e != nil {
+			lastErr = e
+		} else {
+			totalRecords += count
+		}
+
+		// Calculate Usage
+		if count, e := awsService.CalculateUsageHours(ctx); e != nil {
+			lastErr = e
+		} else {
+			totalRecords += count
+		}
+
+		// Sync Active Directory
+		if count, e := awsService.SyncActiveDirectoryUsers(ctx); e != nil {
+			lastErr = e
+		} else {
+			totalRecords += count
+		}
+
+		recordsProcessed = totalRecords
+		err = lastErr
 	default:
 		err = nil
 		recordsProcessed = 0
@@ -60,6 +111,11 @@ func (h *SyncHandler) runSync(syncID int, syncType string) {
 	if err != nil {
 		status = "failed"
 		errorMsg = err.Error()
+		// Send failure notification
+		notificationService.NotifySyncFailed(syncType, errorMsg)
+	} else {
+		// Send success notification
+		notificationService.NotifySyncCompleted(syncType, recordsProcessed)
 	}
 
 	models.UpdateSyncHistory(h.DB, syncID, status, recordsProcessed, errorMsg)

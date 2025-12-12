@@ -49,6 +49,10 @@ func main() {
 	syncHandler := &handlers.SyncHandler{DB: db}
 	dashboardHandler := &handlers.DashboardHandler{DB: db}
 	adminHandler := &handlers.AdminHandler{DB: db}
+	usageHandler := &handlers.UsageHandler{DB: db}
+	billingHandler := &handlers.BillingHandler{DB: db}
+	cloudtrailHandler := &handlers.CloudTrailHandler{DB: db}
+	notificationsHandler := &handlers.NotificationsHandler{DB: db}
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -79,6 +83,42 @@ func main() {
 			workspaces.GET("/:id", workspacesHandler.GetWorkspace)
 			workspaces.GET("/:id/metrics", workspacesHandler.GetWorkspaceMetrics)
 			workspaces.GET("/filters/options", workspacesHandler.GetFilterOptions)
+			workspaces.GET("/export", workspacesHandler.ExportWorkspaces)
+		}
+
+		// Usage
+		usage := api.Group("/usage")
+		{
+			usage.GET("", usageHandler.ListUsage)
+			usage.GET("/summary", usageHandler.GetUsageSummary)
+			usage.GET("/export", usageHandler.ExportUsage)
+		}
+
+		// Billing
+		billing := api.Group("/billing")
+		{
+			billing.GET("", billingHandler.ListBilling)
+			billing.GET("/export", billingHandler.ExportBilling)
+		}
+
+		// CloudTrail
+		cloudtrail := api.Group("/cloudtrail")
+		{
+			cloudtrail.GET("", cloudtrailHandler.ListEvents)
+			cloudtrail.GET("/:id", cloudtrailHandler.GetEvent)
+			cloudtrail.GET("/export", cloudtrailHandler.ExportCloudTrail)
+		}
+
+		// Notifications
+		notifications := api.Group("/notifications")
+		{
+			notifications.GET("", notificationsHandler.ListNotifications)
+			notifications.GET("/unread/count", notificationsHandler.GetUnreadCount)
+			notifications.PUT("/:id/read", notificationsHandler.MarkAsRead)
+			notifications.PUT("/read-all", notificationsHandler.MarkAllAsRead)
+			notifications.DELETE("/:id", notificationsHandler.DeleteNotification)
+			notifications.GET("/preferences", notificationsHandler.GetPreferences)
+			notifications.PUT("/preferences", notificationsHandler.UpdatePreferences)
 		}
 
 		// AI

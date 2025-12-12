@@ -6,12 +6,16 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.29.0
 	github.com/aws/aws-sdk-go-v2/config v1.26.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.0
+	github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.40.0
+	github.com/aws/aws-sdk-go-v2/service/costexplorer v1.38.0
 	github.com/aws/aws-sdk-go-v2/service/workspaces v1.40.0
 	github.com/gin-gonic/gin v1.10.0
+	github.com/go-ldap/ldap/v3 v3.4.6
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.4.0
+	github.com/xuri/excelize/v2 v2.8.0
 	golang.org/x/crypto v0.23.0
 )
 

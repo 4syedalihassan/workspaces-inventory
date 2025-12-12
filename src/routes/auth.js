@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Update last login
-    User.updateLastLogin(user.id);
+    await User.updateLastLogin(user.id);
 
     // Generate JWT token
     const token = generateToken(user);

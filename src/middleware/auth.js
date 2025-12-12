@@ -1,8 +1,11 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config');
 
-// Secret key for JWT (should be in environment variable in production)
-const JWT_SECRET = process.env.JWT_SECRET || 'workspaces-inventory-secret-change-in-production';
+// Secret key for JWT (must be set in environment variable)
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable must be set');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 // Middleware to verify JWT token

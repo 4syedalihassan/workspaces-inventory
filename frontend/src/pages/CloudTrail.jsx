@@ -1,14 +1,34 @@
 import { useEffect, useState } from 'react';
 import { getCloudTrailEvents, exportCloudTrail } from '../api';
-import { Box, Card, CardContent, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Grid, IconButton, Menu, MenuItem, Select, FormControl, InputLabel, Snackbar, Alert } from '@mui/material';
-import { Search, Clear, FileDownload } from '@mui/icons-material';
+import {
+  Card,
+  Input,
+  Button,
+  Table,
+  Select,
+  Row,
+  Col,
+  Space,
+  Typography,
+  Dropdown,
+  message,
+  Spin,
+  DatePicker,
+} from 'antd';
+import {
+  SearchOutlined,
+  ClearOutlined,
+  DownloadOutlined,
+  AuditOutlined,
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
+
+const { Title, Text } = Typography;
 
 function CloudTrail() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ event_name: '', workspace_id: '', from_date: '', to_date: '' });
-  const [exportAnchorEl, setExportAnchorEl] = useState(null);
-  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => { loadEvents(); }, []);
 
@@ -21,108 +41,191 @@ function CloudTrail() {
       setEvents(data.data || []);
     } catch (error) {
       console.error('Error loading events:', error);
+      message.error('Failed to load CloudTrail events');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFilterChange = (e) => {
-    setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleFilterChange = (name, value) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleClear = () => {
+    setFilters({ event_name: '', workspace_id: '', from_date: '', to_date: '' });
+    setTimeout(loadEvents, 0);
   };
 
   const handleExport = async (format) => {
-    setExportAnchorEl(null);
     try {
       await exportCloudTrail(format, filters);
-      setNotification({ open: true, message: 'Export started successfully', severity: 'success' });
+      message.success('Export started successfully');
     } catch (error) {
       console.error('Export failed:', error);
-      setNotification({ open: true, message: 'Export failed. Please try again.', severity: 'error' });
+      message.error('Export failed. Please try again.');
     }
   };
 
+  const exportMenuItems = [
+    {
+      key: 'xlsx',
+      label: 'Excel',
+      onClick: () => handleExport('xlsx'),
+    },
+  ];
+
+  const columns = [
+    {
+      title: 'Event Time',
+      dataIndex: 'event_time',
+      key: 'event_time',
+      render: (time) => time ? new Date(time).toLocaleString() : '-',
+    },
+    {
+      title: 'Event Name',
+      dataIndex: 'event_name',
+      key: 'event_name',
+      render: (text) => text || '-',
+    },
+    {
+      title: 'Workspace ID',
+      dataIndex: 'workspace_id',
+      key: 'workspace_id',
+      render: (text) => text ? <code style={{ fontSize: '12px' }}>{text}</code> : '-',
+    },
+    {
+      title: 'User',
+      dataIndex: 'username',
+      key: 'username',
+      render: (text, record) => record.user_identity?.userName || text || '-',
+    },
+    {
+      title: 'Source IP',
+      dataIndex: 'source_ip_address',
+      key: 'source_ip_address',
+      render: (text) => text || '-',
+    },
+    {
+      title: 'Region',
+      dataIndex: 'aws_region',
+      key: 'aws_region',
+      render: (text) => text || '-',
+    },
+  ];
+
   return (
-    <Box>
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2} alignItems="flex-end">
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Event Name</InputLabel>
-                <Select name="event_name" value={filters.event_name} onChange={handleFilterChange} label="Event Name">
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="CreateWorkspaces">CreateWorkspaces</MenuItem>
-                  <MenuItem value="TerminateWorkspaces">TerminateWorkspaces</MenuItem>
-                  <MenuItem value="ModifyWorkspaceProperties">ModifyWorkspaceProperties</MenuItem>
-                  <MenuItem value="RebootWorkspaces">RebootWorkspaces</MenuItem>
-                  <MenuItem value="RebuildWorkspaces">RebuildWorkspaces</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <TextField fullWidth label="Workspace ID" name="workspace_id" value={filters.workspace_id} onChange={handleFilterChange} size="small" placeholder="ws-..." />
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <TextField fullWidth label="From Date" name="from_date" type="date" value={filters.from_date} onChange={handleFilterChange} size="small" InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <TextField fullWidth label="To Date" name="to_date" type="date" value={filters.to_date} onChange={handleFilterChange} size="small" InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Box display="flex" gap={1}>
-                <Button variant="contained" startIcon={<Search />} onClick={loadEvents} fullWidth>Filter</Button>
-                <Button variant="outlined" startIcon={<Clear />} onClick={() => { setFilters({ event_name: '', workspace_id: '', from_date: '', to_date: '' }); setTimeout(loadEvents, 0); }}>Clear</Button>
-                <IconButton onClick={(e) => setExportAnchorEl(e.currentTarget)} color="primary"><FileDownload /></IconButton>
-                <Menu anchorEl={exportAnchorEl} open={Boolean(exportAnchorEl)} onClose={() => setExportAnchorEl(null)}>
-                  <MenuItem onClick={() => handleExport('xlsx')}>Excel</MenuItem>
-                </Menu>
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
+    <div>
+      {/* Page Header */}
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <Space align="center" style={{ marginBottom: 8 }}>
+            <AuditOutlined style={{ fontSize: 28, color: '#ff9900' }} />
+            <Title level={2} style={{ margin: 0 }}>CloudTrail</Title>
+          </Space>
+          <Text type="secondary">View AWS CloudTrail events for WorkSpaces</Text>
+        </div>
+        <Dropdown menu={{ items: exportMenuItems }} placement="bottomRight">
+          <Button type="primary" icon={<DownloadOutlined />}>
+            Export
+          </Button>
+        </Dropdown>
+      </div>
+
+      {/* Filters Card */}
+      <Card style={{ marginBottom: 16 }}>
+        <Row gutter={[16, 16]} align="bottom">
+          <Col xs={24} md={5}>
+            <div>
+              <Text type="secondary" style={{ fontSize: '12px' }}>Event Name</Text>
+              <Select
+                style={{ width: '100%' }}
+                placeholder="All Events"
+                value={filters.event_name || undefined}
+                onChange={(val) => handleFilterChange('event_name', val || '')}
+                allowClear
+              >
+                <Select.Option value="CreateWorkspaces">CreateWorkspaces</Select.Option>
+                <Select.Option value="TerminateWorkspaces">TerminateWorkspaces</Select.Option>
+                <Select.Option value="ModifyWorkspaceProperties">ModifyWorkspaceProperties</Select.Option>
+                <Select.Option value="RebootWorkspaces">RebootWorkspaces</Select.Option>
+                <Select.Option value="RebuildWorkspaces">RebuildWorkspaces</Select.Option>
+              </Select>
+            </div>
+          </Col>
+          <Col xs={24} md={5}>
+            <div>
+              <Text type="secondary" style={{ fontSize: '12px' }}>Workspace ID</Text>
+              <Input
+                placeholder="ws-..."
+                value={filters.workspace_id}
+                onChange={(e) => handleFilterChange('workspace_id', e.target.value)}
+                allowClear
+              />
+            </div>
+          </Col>
+          <Col xs={24} md={5}>
+            <div>
+              <Text type="secondary" style={{ fontSize: '12px' }}>From Date</Text>
+              <DatePicker
+                style={{ width: '100%' }}
+                value={filters.from_date ? dayjs(filters.from_date) : null}
+                onChange={(date) => handleFilterChange('from_date', date ? date.format('YYYY-MM-DD') : '')}
+                placeholder="Select from date"
+              />
+            </div>
+          </Col>
+          <Col xs={24} md={5}>
+            <div>
+              <Text type="secondary" style={{ fontSize: '12px' }}>To Date</Text>
+              <DatePicker
+                style={{ width: '100%' }}
+                value={filters.to_date ? dayjs(filters.to_date) : null}
+                onChange={(date) => handleFilterChange('to_date', date ? date.format('YYYY-MM-DD') : '')}
+                placeholder="Select to date"
+              />
+            </div>
+          </Col>
+          <Col xs={24} md={4}>
+            <Space>
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                onClick={loadEvents}
+              >
+                Filter
+              </Button>
+              <Button
+                icon={<ClearOutlined />}
+                onClick={handleClear}
+              >
+                Clear
+              </Button>
+            </Space>
+          </Col>
+        </Row>
       </Card>
 
+      {/* Table Card */}
       <Card>
-        <CardContent>
-          {loading ? (
-            <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Event Time</TableCell>
-                    <TableCell>Event Name</TableCell>
-                    <TableCell>Workspace ID</TableCell>
-                    <TableCell>User</TableCell>
-                    <TableCell>Source IP</TableCell>
-                    <TableCell>Region</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {events.map((event, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell>{event.event_time ? new Date(event.event_time).toLocaleString() : '-'}</TableCell>
-                      <TableCell>{event.event_name || '-'}</TableCell>
-                      <TableCell><code>{event.workspace_id || '-'}</code></TableCell>
-                      <TableCell>{event.user_identity?.userName || event.username || '-'}</TableCell>
-                      <TableCell>{event.source_ip_address || '-'}</TableCell>
-                      <TableCell>{event.aws_region || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+            <Spin size="large" />
+          </div>
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={events}
+            rowKey={(record, index) => `${record.event_time}-${index}`}
+            pagination={{
+              showSizeChanger: true,
+              showTotal: (total) => `Total ${total} events`,
+            }}
+            scroll={{ x: 1000 }}
+            size="small"
+          />
+        )}
       </Card>
-
-      <Snackbar open={notification.open} autoHideDuration={5000} onClose={() => setNotification({...notification, open: false})} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-        <Alert onClose={() => setNotification({...notification, open: false})} severity={notification.severity} sx={{ width: '100%' }}>
-          {notification.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+    </div>
   );
 }
 

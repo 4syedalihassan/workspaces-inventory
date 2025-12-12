@@ -1,14 +1,33 @@
 import { useEffect, useState } from 'react';
 import { getUsage, exportUsage } from '../api';
-import { Box, Card, CardContent, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Grid, IconButton, Menu, MenuItem, Snackbar, Alert } from '@mui/material';
-import { Search, Clear, FileDownload } from '@mui/icons-material';
+import {
+  Card,
+  Input,
+  Button,
+  Table,
+  Row,
+  Col,
+  Space,
+  Typography,
+  Dropdown,
+  message,
+  Spin,
+  DatePicker,
+} from 'antd';
+import {
+  SearchOutlined,
+  ClearOutlined,
+  DownloadOutlined,
+  ClockCircleOutlined,
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
+
+const { Title, Text } = Typography;
 
 function Usage() {
   const [usage, setUsage] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ user_name: '', month_from: '', month_to: '' });
-  const [exportAnchorEl, setExportAnchorEl] = useState(null);
-  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => { loadUsage(); }, []);
 
@@ -21,96 +40,179 @@ function Usage() {
       setUsage(data.data || []);
     } catch (error) {
       console.error('Error loading usage:', error);
+      message.error('Failed to load usage data');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFilterChange = (e) => {
-    setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleFilterChange = (name, value) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleClear = () => {
+    setFilters({ user_name: '', month_from: '', month_to: '' });
+    setTimeout(loadUsage, 0);
   };
 
   const handleExport = async (format) => {
-    setExportAnchorEl(null);
     try {
       await exportUsage(format, filters);
-      setNotification({ open: true, message: 'Export started successfully', severity: 'success' });
+      message.success('Export started successfully');
     } catch (error) {
       console.error('Export failed:', error);
-      setNotification({ open: true, message: 'Export failed. Please try again.', severity: 'error' });
+      message.error('Export failed. Please try again.');
     }
   };
 
+  const exportMenuItems = [
+    {
+      key: 'xlsx',
+      label: 'Excel',
+      onClick: () => handleExport('xlsx'),
+    },
+    {
+      key: 'csv',
+      label: 'CSV',
+      onClick: () => handleExport('csv'),
+    },
+  ];
+
+  const columns = [
+    {
+      title: 'Workspace ID',
+      dataIndex: 'workspace_id',
+      key: 'workspace_id',
+      render: (text) => <code style={{ fontSize: '12px' }}>{text}</code>,
+    },
+    {
+      title: 'User',
+      dataIndex: 'user_name',
+      key: 'user_name',
+      render: (text) => text || '-',
+    },
+    {
+      title: 'Bundle',
+      dataIndex: 'bundle_id',
+      key: 'bundle_id',
+      render: (text) => <Text style={{ fontSize: '12px' }}>{text || '-'}</Text>,
+    },
+    {
+      title: 'Running Mode',
+      dataIndex: 'running_mode',
+      key: 'running_mode',
+      render: (text) => text || '-',
+    },
+    {
+      title: 'Month',
+      dataIndex: 'month',
+      key: 'month',
+    },
+    {
+      title: 'Usage Hours',
+      dataIndex: 'usage_hours',
+      key: 'usage_hours',
+      render: (val) => val?.toFixed(2) || '0.00',
+    },
+  ];
+
   return (
-    <Box>
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2} alignItems="flex-end">
-            <Grid item xs={12} md={3}>
-              <TextField fullWidth label="User Name" name="user_name" value={filters.user_name} onChange={handleFilterChange} size="small" />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField fullWidth label="Month From" name="month_from" type="month" value={filters.month_from} onChange={handleFilterChange} size="small" InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField fullWidth label="Month To" name="month_to" type="month" value={filters.month_to} onChange={handleFilterChange} size="small" InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <Box display="flex" gap={1}>
-                <Button variant="contained" startIcon={<Search />} onClick={loadUsage} fullWidth>Filter</Button>
-                <Button variant="outlined" startIcon={<Clear />} onClick={() => { setFilters({ user_name: '', month_from: '', month_to: '' }); setTimeout(loadUsage, 0); }}>Clear</Button>
-                <IconButton onClick={(e) => setExportAnchorEl(e.currentTarget)} color="primary"><FileDownload /></IconButton>
-                <Menu anchorEl={exportAnchorEl} open={Boolean(exportAnchorEl)} onClose={() => setExportAnchorEl(null)}>
-                  <MenuItem onClick={() => handleExport('xlsx')}>Excel</MenuItem>
-                  <MenuItem onClick={() => handleExport('csv')}>CSV</MenuItem>
-                </Menu>
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
+    <div>
+      {/* Page Header */}
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <Space align="center" style={{ marginBottom: 8 }}>
+            <ClockCircleOutlined style={{ fontSize: 28, color: '#ff9900' }} />
+            <Title level={2} style={{ margin: 0 }}>Usage</Title>
+          </Space>
+          <Text type="secondary">View WorkSpaces usage hours by month</Text>
+        </div>
+        <Dropdown menu={{ items: exportMenuItems }} placement="bottomRight">
+          <Button type="primary" icon={<DownloadOutlined />}>
+            Export
+          </Button>
+        </Dropdown>
+      </div>
+
+      {/* Filters Card */}
+      <Card style={{ marginBottom: 16 }}>
+        <Row gutter={[16, 16]} align="bottom">
+          <Col xs={24} md={6}>
+            <div>
+              <Text type="secondary" style={{ fontSize: '12px' }}>User Name</Text>
+              <Input
+                placeholder="Search by user"
+                value={filters.user_name}
+                onChange={(e) => handleFilterChange('user_name', e.target.value)}
+                allowClear
+              />
+            </div>
+          </Col>
+          <Col xs={24} md={6}>
+            <div>
+              <Text type="secondary" style={{ fontSize: '12px' }}>Month From</Text>
+              <DatePicker
+                picker="month"
+                style={{ width: '100%' }}
+                value={filters.month_from ? dayjs(filters.month_from) : null}
+                onChange={(date) => handleFilterChange('month_from', date ? date.format('YYYY-MM') : '')}
+                placeholder="Select month"
+              />
+            </div>
+          </Col>
+          <Col xs={24} md={6}>
+            <div>
+              <Text type="secondary" style={{ fontSize: '12px' }}>Month To</Text>
+              <DatePicker
+                picker="month"
+                style={{ width: '100%' }}
+                value={filters.month_to ? dayjs(filters.month_to) : null}
+                onChange={(date) => handleFilterChange('month_to', date ? date.format('YYYY-MM') : '')}
+                placeholder="Select month"
+              />
+            </div>
+          </Col>
+          <Col xs={24} md={6}>
+            <Space>
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                onClick={loadUsage}
+              >
+                Filter
+              </Button>
+              <Button
+                icon={<ClearOutlined />}
+                onClick={handleClear}
+              >
+                Clear
+              </Button>
+            </Space>
+          </Col>
+        </Row>
       </Card>
 
+      {/* Table Card */}
       <Card>
-        <CardContent>
-          {loading ? (
-            <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Workspace ID</TableCell>
-                    <TableCell>User</TableCell>
-                    <TableCell>Bundle</TableCell>
-                    <TableCell>Running Mode</TableCell>
-                    <TableCell>Month</TableCell>
-                    <TableCell>Usage Hours</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {usage.map((u, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell><code>{u.workspace_id}</code></TableCell>
-                      <TableCell>{u.user_name || '-'}</TableCell>
-                      <TableCell><small>{u.bundle_id || '-'}</small></TableCell>
-                      <TableCell>{u.running_mode || '-'}</TableCell>
-                      <TableCell>{u.month}</TableCell>
-                      <TableCell>{u.usage_hours?.toFixed(2) || 0}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+            <Spin size="large" />
+          </div>
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={usage}
+            rowKey={(record, index) => `${record.workspace_id}-${record.month}-${index}`}
+            pagination={{
+              showSizeChanger: true,
+              showTotal: (total) => `Total ${total} records`,
+            }}
+            scroll={{ x: 800 }}
+            size="small"
+          />
+        )}
       </Card>
-
-      <Snackbar open={notification.open} autoHideDuration={5000} onClose={() => setNotification({...notification, open: false})} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-        <Alert onClose={() => setNotification({...notification, open: false})} severity={notification.severity} sx={{ width: '100%' }}>
-          {notification.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+    </div>
   );
 }
 

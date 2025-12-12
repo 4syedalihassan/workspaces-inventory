@@ -26,9 +26,9 @@ type AWSService struct {
 	DB *sql.DB
 }
 
-// GetAWSConfig creates AWS config from database settings
+// GetAWSConfig creates AWS config from database settings (legacy - for backwards compatibility)
 func (s *AWSService) GetAWSConfig(ctx context.Context) (aws.Config, error) {
-	// Get credentials from database
+	// Get credentials from database settings (old approach)
 	region, err := models.GetSetting(s.DB, "aws.region")
 	if err != nil {
 		return aws.Config{}, err
@@ -61,8 +61,40 @@ func (s *AWSService) GetAWSConfig(ctx context.Context) (aws.Config, error) {
 	return cfg, err
 }
 
-// SyncWorkSpaces fetches all WorkSpaces from AWS and stores them
+// GetAWSConfigForAccount creates AWS config for a specific AWS account
+func (s *AWSService) GetAWSConfigForAccount(ctx context.Context, accountID int) (aws.Config, error) {
+	// Get account credentials from aws_accounts table
+	account, err := models.GetAWSAccountByID(s.DB, accountID)
+	if err != nil {
+		return aws.Config{}, fmt.Errorf("failed to get AWS account: %w", err)
+	}
+
+	if account.AccessKeyID == "" || account.SecretAccessKey == "" {
+		return aws.Config{}, fmt.Errorf("AWS credentials not configured for account %s", account.Name)
+	}
+
+	// Create config with credentials
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion(account.Region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			account.AccessKeyID,
+			account.SecretAccessKey,
+			"",
+		)),
+	)
+
+	return cfg, err
+}
+
+// SyncWorkSpaces fetches all WorkSpaces from AWS and stores them (legacy - uses default account)
 func (s *AWSService) SyncWorkSpaces(ctx context.Context) (int, error) {
+	// Try to get default account first
+	defaultAccount, err := models.GetDefaultAWSAccount(s.DB)
+	if err == nil && defaultAccount != nil {
+		return s.SyncWorkSpacesForAccount(ctx, defaultAccount.ID)
+	}
+
+	// Fallback to legacy settings-based config
 	cfg, err := s.GetAWSConfig(ctx)
 	if err != nil {
 		return 0, err
@@ -72,7 +104,7 @@ func (s *AWSService) SyncWorkSpaces(ctx context.Context) (int, error) {
 	client := workspaces.NewFromConfig(cfg)
 
 	// Describe all workspaces
-	log.Println("Fetching WorkSpaces from AWS...")
+	log.Println("Fetching WorkSpaces from AWS (legacy mode)...")
 	input := &workspaces.DescribeWorkspacesInput{}
 	result, err := client.DescribeWorkspaces(ctx, input)
 	if err != nil {
@@ -81,8 +113,8 @@ func (s *AWSService) SyncWorkSpaces(ctx context.Context) (int, error) {
 
 	count := 0
 	for _, ws := range result.Workspaces {
-		// Upsert workspace
-		err := s.upsertWorkspace(ws)
+		// Upsert workspace without account ID (legacy)
+		err := s.upsertWorkspace(ws, 0)
 		if err != nil {
 			log.Printf("Failed to upsert workspace %s: %v", *ws.WorkspaceId, err)
 			continue
@@ -94,8 +126,74 @@ func (s *AWSService) SyncWorkSpaces(ctx context.Context) (int, error) {
 	return count, nil
 }
 
+// SyncWorkSpacesForAccount fetches all WorkSpaces from AWS for a specific account
+func (s *AWSService) SyncWorkSpacesForAccount(ctx context.Context, accountID int) (int, error) {
+	cfg, err := s.GetAWSConfigForAccount(ctx, accountID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Create WorkSpaces client
+	client := workspaces.NewFromConfig(cfg)
+
+	// Describe all workspaces
+	log.Printf("Fetching WorkSpaces from AWS for account ID %d...", accountID)
+	input := &workspaces.DescribeWorkspacesInput{}
+	result, err := client.DescribeWorkspaces(ctx, input)
+	if err != nil {
+		return 0, fmt.Errorf("failed to describe workspaces: %w", err)
+	}
+
+	count := 0
+	for _, ws := range result.Workspaces {
+		// Upsert workspace with account ID
+		err := s.upsertWorkspace(ws, accountID)
+		if err != nil {
+			log.Printf("Failed to upsert workspace %s: %v", *ws.WorkspaceId, err)
+			continue
+		}
+		count++
+	}
+
+	// Update last sync timestamp for the account
+	models.UpdateAWSAccountLastSync(s.DB, accountID)
+
+	log.Printf("Successfully synced %d workspaces for account ID %d", count, accountID)
+	return count, nil
+}
+
+// SyncAllAccounts syncs WorkSpaces from all active AWS accounts
+func (s *AWSService) SyncAllAccounts(ctx context.Context) (int, error) {
+	// Get all active accounts
+	accounts, err := models.GetAllAWSAccounts(s.DB)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get AWS accounts: %w", err)
+	}
+
+	totalCount := 0
+	for _, account := range accounts {
+		if !account.IsActive || account.Status == "error" {
+			log.Printf("Skipping inactive or error account: %s", account.Name)
+			continue
+		}
+
+		count, err := s.SyncWorkSpacesForAccount(ctx, account.ID)
+		if err != nil {
+			log.Printf("Failed to sync account %s: %v", account.Name, err)
+			models.UpdateAWSAccountStatus(s.DB, account.ID, "error")
+			continue
+		}
+
+		totalCount += count
+		models.UpdateAWSAccountStatus(s.DB, account.ID, "connected")
+	}
+
+	log.Printf("Successfully synced %d workspaces across all accounts", totalCount)
+	return totalCount, nil
+}
+
 // upsertWorkspace inserts or updates a workspace in the database
-func (s *AWSService) upsertWorkspace(ws wstypes.Workspace) error {
+func (s *AWSService) upsertWorkspace(ws wstypes.Workspace, accountID int) error {
 	// Note: CreationTime, TerminationTime, and LastKnownUserConnectionTimestamp
 	// are not available in AWS SDK v2 Workspace struct, so we set them to nil
 	var createdAt, terminatedAt, lastConnection *time.Time
@@ -130,14 +228,20 @@ func (s *AWSService) upsertWorkspace(ws wstypes.Workspace) error {
 		state = &st
 	}
 
+	// Handle account ID (use NULL if 0 for legacy support)
+	var accountIDPtr *int
+	if accountID > 0 {
+		accountIDPtr = &accountID
+	}
+
 	_, err := s.DB.Exec(`
 		INSERT INTO workspaces (
 			workspace_id, user_name, display_name, directory_id, ip_address,
 			state, bundle_id, subnet_id, computer_name, running_mode,
 			root_volume_size_gib, user_volume_size_gib, compute_type_name,
 			created_at, terminated_at, last_known_user_connection_timestamp,
-			updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
+			aws_account_id, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
 		ON CONFLICT (workspace_id) DO UPDATE SET
 			user_name = $2,
 			display_name = $3,
@@ -151,6 +255,7 @@ func (s *AWSService) upsertWorkspace(ws wstypes.Workspace) error {
 			root_volume_size_gib = $11,
 			user_volume_size_gib = $12,
 			compute_type_name = $13,
+			aws_account_id = $17,
 			updated_at = NOW()
 	`,
 		ws.WorkspaceId,
@@ -169,6 +274,7 @@ func (s *AWSService) upsertWorkspace(ws wstypes.Workspace) error {
 		createdAt,
 		terminatedAt,
 		lastConnection,
+		accountIDPtr,
 	)
 
 	return err

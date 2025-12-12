@@ -369,6 +369,72 @@ func RunMigrations() error {
 					ADD COLUMN IF NOT EXISTS state_changed_at TIMESTAMP;
 			`,
 		},
+		{
+			version: 10,
+			sql: `
+				-- Create aws_accounts table for managing multiple AWS accounts
+				CREATE TABLE IF NOT EXISTS aws_accounts (
+					id SERIAL PRIMARY KEY,
+					name VARCHAR(255) NOT NULL,
+					account_id VARCHAR(12),
+					region VARCHAR(50) NOT NULL DEFAULT 'us-east-1',
+					access_key_id TEXT NOT NULL,
+					secret_access_key TEXT NOT NULL,
+					is_default BOOLEAN DEFAULT false,
+					is_active BOOLEAN DEFAULT true,
+					status VARCHAR(50) DEFAULT 'pending',
+					last_sync TIMESTAMP,
+					created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+					updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+					UNIQUE(name)
+				);
+
+				-- Create index on is_default for quick lookups
+				CREATE INDEX IF NOT EXISTS idx_aws_accounts_default ON aws_accounts(is_default) WHERE is_default = true;
+
+				-- Create index on is_active
+				CREATE INDEX IF NOT EXISTS idx_aws_accounts_active ON aws_accounts(is_active);
+
+				-- Ensure only one default account
+				CREATE UNIQUE INDEX IF NOT EXISTS idx_aws_accounts_one_default ON aws_accounts(is_default) WHERE is_default = true;
+
+				-- Add updated_at trigger
+				CREATE OR REPLACE FUNCTION update_aws_accounts_updated_at()
+				RETURNS TRIGGER AS $$
+				BEGIN
+					NEW.updated_at = CURRENT_TIMESTAMP;
+					RETURN NEW;
+				END;
+				$$ LANGUAGE plpgsql;
+
+				DROP TRIGGER IF EXISTS aws_accounts_updated_at ON aws_accounts;
+				CREATE TRIGGER aws_accounts_updated_at
+					BEFORE UPDATE ON aws_accounts
+					FOR EACH ROW
+					EXECUTE FUNCTION update_aws_accounts_updated_at();
+			`,
+		},
+		{
+			version: 11,
+			sql: `
+				-- Add aws_account_id to workspaces table to track which account each workspace belongs to
+				ALTER TABLE workspaces
+					ADD COLUMN IF NOT EXISTS aws_account_id INTEGER REFERENCES aws_accounts(id) ON DELETE SET NULL;
+
+				-- Create index for faster lookups
+				CREATE INDEX IF NOT EXISTS idx_workspaces_aws_account_id ON workspaces(aws_account_id);
+
+				-- Add aws_account_id to other tables for multi-account support
+				ALTER TABLE cloudtrail_events
+					ADD COLUMN IF NOT EXISTS aws_account_id INTEGER REFERENCES aws_accounts(id) ON DELETE SET NULL;
+
+				ALTER TABLE billing_data
+					ADD COLUMN IF NOT EXISTS aws_account_id INTEGER REFERENCES aws_accounts(id) ON DELETE SET NULL;
+
+				CREATE INDEX IF NOT EXISTS idx_cloudtrail_aws_account_id ON cloudtrail_events(aws_account_id);
+				CREATE INDEX IF NOT EXISTS idx_billing_aws_account_id ON billing_data(aws_account_id);
+			`,
+		},
 	}
 
 	for _, migration := range migrations {

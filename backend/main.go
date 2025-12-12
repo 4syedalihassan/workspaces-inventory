@@ -53,6 +53,7 @@ func main() {
 	billingHandler := &handlers.BillingHandler{DB: db}
 	cloudtrailHandler := &handlers.CloudTrailHandler{DB: db}
 	notificationsHandler := &handlers.NotificationsHandler{DB: db}
+	awsAccountHandler := &handlers.AWSAccountHandler{DB: db}
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -151,7 +152,15 @@ func main() {
 			admin.PUT("/users/:id", adminHandler.UpdateUser)
 			admin.DELETE("/users/:id", adminHandler.DeleteUser)
 
-			// Integration tests
+			// AWS Account management
+			admin.GET("/aws-accounts", awsAccountHandler.ListAWSAccounts)
+			admin.GET("/aws-accounts/:id", awsAccountHandler.GetAWSAccount)
+			admin.POST("/aws-accounts", awsAccountHandler.CreateAWSAccount)
+			admin.PUT("/aws-accounts/:id", awsAccountHandler.UpdateAWSAccount)
+			admin.DELETE("/aws-accounts/:id", awsAccountHandler.DeleteAWSAccount)
+			admin.GET("/aws-accounts/:id/test", awsAccountHandler.TestAWSConnection)
+
+			// Integration tests (legacy)
 			admin.POST("/test/aws", adminHandler.TestAWSConnection)
 
 			// Legacy config endpoint

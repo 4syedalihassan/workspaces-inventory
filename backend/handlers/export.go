@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strings"
 	"time"
 
+	"github.com/4syedalihassan/workspaces-inventory/models"
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
 )
@@ -77,7 +77,6 @@ func exportExcel(c *gin.Context, data interface{}, filename string) {
 
 	// Apply header styling
 	headerStyle, _ := f.NewStyle(&excelize.Style{
-		Font: &excelize.Font{Bold: true, Size: 12},
 		Fill: excelize.Fill{Type: "pattern", Color: []string{"#4472C4"}, Pattern: 1},
 		Font: &excelize.Font{Color: "#FFFFFF", Bold: true},
 	})

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/4syedalihassan/workspaces-inventory/models"
 	"github.com/gin-gonic/gin"
 )
 

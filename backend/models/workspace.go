@@ -30,16 +30,6 @@ type Workspace struct {
 	UpdatedAt                           time.Time       `json:"updated_at" db:"updated_at"`
 }
 
-// WorkspaceUsage represents monthly usage data for a workspace
-type WorkspaceUsage struct {
-	ID          int       `json:"id" db:"id"`
-	WorkspaceID string    `json:"workspace_id" db:"workspace_id"`
-	Month       string    `json:"month" db:"month"` // YYYY-MM format
-	UsageHours  float64   `json:"usage_hours" db:"usage_hours"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
-}
-
 // GetWorkspaceByID retrieves a workspace by ID
 func GetWorkspaceByID(db *sql.DB, workspaceID string) (*Workspace, error) {
 	var ws Workspace

@@ -49,7 +49,8 @@ func (h *SyncHandler) runSync(syncID int, syncType string) {
 
 	switch syncType {
 	case "workspaces":
-		recordsProcessed, err = awsService.SyncWorkSpaces(ctx)
+		// Sync WorkSpaces from all active AWS accounts
+		recordsProcessed, err = awsService.SyncAllAccounts(ctx)
 	case "cloudtrail":
 		recordsProcessed, err = awsService.SyncCloudTrail(ctx)
 	case "billing":
@@ -63,8 +64,8 @@ func (h *SyncHandler) runSync(syncID int, syncType string) {
 		var totalRecords int
 		var lastErr error
 
-		// Sync WorkSpaces
-		if count, e := awsService.SyncWorkSpaces(ctx); e != nil {
+		// Sync WorkSpaces from all AWS accounts
+		if count, e := awsService.SyncAllAccounts(ctx); e != nil {
 			lastErr = e
 		} else {
 			totalRecords += count

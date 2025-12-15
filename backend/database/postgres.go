@@ -459,7 +459,6 @@ func RunMigrations() error {
 				-- Create unique index on name for active servers only
 				CREATE UNIQUE INDEX IF NOT EXISTS idx_ldap_servers_unique_name_active ON ldap_servers(name) WHERE is_active = true;
 				-- Create index on is_default for quick lookups
-				CREATE INDEX IF NOT EXISTS idx_ldap_servers_default ON ldap_servers(is_default) WHERE is_default = true;
 
 				-- Create index on is_active
 				CREATE INDEX IF NOT EXISTS idx_ldap_servers_active ON ldap_servers(is_active);

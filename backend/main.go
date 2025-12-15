@@ -159,6 +159,7 @@ func main() {
 			admin.PUT("/aws-accounts/:id", awsAccountHandler.UpdateAWSAccount)
 			admin.DELETE("/aws-accounts/:id", awsAccountHandler.DeleteAWSAccount)
 			admin.GET("/aws-accounts/:id/test", awsAccountHandler.TestAWSConnection)
+			admin.POST("/aws-accounts/:id/sync", awsAccountHandler.SyncAWSAccount)
 
 			// Integration tests (legacy)
 			admin.POST("/test/aws", adminHandler.TestAWSConnection)

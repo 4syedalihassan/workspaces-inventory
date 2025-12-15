@@ -24,6 +24,7 @@ import {
   EditOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { API_BASE } from '../api';
 
@@ -407,6 +408,25 @@ function Settings() {
     }
   };
 
+  const syncAWSAccount = async (accountId, accountName) => {
+    try {
+      message.loading({ content: `Syncing ${accountName}...`, key: 'sync', duration: 0 });
+      const response = await apiFetch(`${API_BASE}/admin/aws-accounts/${accountId}/sync`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        message.success({ content: `Sync started for ${accountName}`, key: 'sync' });
+        // Reload accounts to see updated sync time
+        setTimeout(() => loadAWSAccounts(), 2000);
+      } else {
+        const data = await response.json();
+        message.error({ content: data.error || 'Failed to start sync', key: 'sync' });
+      }
+    } catch (error) {
+      message.error({ content: 'Error syncing AWS account: ' + error.message, key: 'sync' });
+    }
+  };
+
   // LDAP Integration Functions
   const loadLdapSettings = async () => {
     try {
@@ -571,6 +591,12 @@ function Settings() {
         <Space>
           <Button
             type="text"
+            icon={<SyncOutlined />}
+            onClick={() => syncAWSAccount(record.id, record.name)}
+            title="Sync WorkSpaces"
+          />
+          <Button
+            type="text"
             icon={<CheckCircleOutlined />}
             onClick={() => testAWSConnection(record.id)}
             title="Test Connection"
@@ -579,12 +605,14 @@ function Settings() {
             type="text"
             icon={<EditOutlined />}
             onClick={() => editAWSAccount(record)}
+            title="Edit"
           />
           <Button
             type="text"
             danger
             icon={<DeleteOutlined />}
             onClick={() => deleteAWSAccount(record)}
+            title="Delete"
           />
         </Space>
       ),

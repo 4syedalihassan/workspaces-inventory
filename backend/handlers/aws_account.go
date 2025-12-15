@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/4syedalihassan/workspaces-inventory/models"
+	"github.com/4syedalihassan/workspaces-inventory/services"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -258,5 +261,58 @@ func (h *AWSAccountHandler) fetchAndUpdateAccountID(id int, region, accessKeyID,
 		models.UpdateAWSAccountStatus(h.DB, id, "limited")
 	} else {
 		models.UpdateAWSAccountStatus(h.DB, id, "connected")
+	}
+}
+
+// SyncAWSAccount triggers a sync for a specific AWS account
+func (h *AWSAccountHandler) SyncAWSAccount(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid account ID"})
+		return
+	}
+
+	// Verify account exists
+	account, err := models.GetAWSAccountByID(h.DB, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "AWS account not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve AWS account"})
+		return
+	}
+
+	// Run sync asynchronously
+	go h.syncAccount(id, account.Name)
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"message":     "Sync started",
+		"account_id":  id,
+		"account_name": account.Name,
+	})
+}
+
+// syncAccount performs the actual sync operation for an account
+func (h *AWSAccountHandler) syncAccount(accountID int, accountName string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	awsService := &services.AWSService{DB: h.DB}
+	notificationService := &services.NotificationService{DB: h.DB}
+
+	// Sync WorkSpaces for this account
+	recordsProcessed, err := awsService.SyncWorkSpacesForAccount(ctx, accountID)
+	
+	if err != nil {
+		// Update account status to error
+		models.UpdateAWSAccountStatus(h.DB, accountID, "error")
+		// Send failure notification
+		notificationService.NotifySyncFailed(accountName, err.Error())
+	} else {
+		// Update account status to connected
+		models.UpdateAWSAccountStatus(h.DB, accountID, "connected")
+		// Send success notification
+		notificationService.NotifySyncCompleted(accountName, recordsProcessed)
 	}
 }

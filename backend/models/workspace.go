@@ -8,9 +8,9 @@ import (
 
 // Workspace represents an AWS WorkSpace
 type Workspace struct {
-	WorkspaceID                         string          `json:"workspace_id" db:"workspace_id"`
+	WorkspaceID                         string          `json:"id" db:"workspace_id"`
 	UserName                            string          `json:"user_name" db:"user_name"`
-	DisplayName                         string          `json:"display_name" db:"display_name"`
+	DisplayName                         string          `json:"user_display_name" db:"display_name"`
 	DirectoryID                         string          `json:"directory_id" db:"directory_id"`
 	IPAddress                           string          `json:"ip_address" db:"ip_address"`
 	State                               string          `json:"state" db:"state"`
@@ -20,12 +20,12 @@ type Workspace struct {
 	RunningMode                         string          `json:"running_mode" db:"running_mode"`
 	RootVolumeSizeGib                   int             `json:"root_volume_size_gib" db:"root_volume_size_gib"`
 	UserVolumeSizeGib                   int             `json:"user_volume_size_gib" db:"user_volume_size_gib"`
-	ComputeTypeName                     string          `json:"compute_type_name" db:"compute_type_name"`
+	ComputeTypeName                     string          `json:"compute_type" db:"compute_type_name"`
 	CreatedAt                           *time.Time      `json:"created_at" db:"created_at"`
 	TerminatedAt                        *time.Time      `json:"terminated_at" db:"terminated_at"`
 	LastKnownUserConnectionTimestamp    *time.Time      `json:"last_known_user_connection_timestamp" db:"last_known_user_connection_timestamp"`
-	CreatedByUser                       string          `json:"created_by_user" db:"created_by_user"`
-	TerminatedByUser                    string          `json:"terminated_by_user" db:"terminated_by_user"`
+	CreatedByUser                       string          `json:"created_by" db:"created_by_user"`
+	TerminatedByUser                    string          `json:"terminated_by" db:"terminated_by_user"`
 	Tags                                json.RawMessage `json:"tags" db:"tags"`
 	UpdatedAt                           time.Time       `json:"updated_at" db:"updated_at"`
 }

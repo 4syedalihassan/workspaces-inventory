@@ -112,7 +112,7 @@ func (h *WorkspacesHandler) GetFilterOptions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"states":        states,
-		"running_modes": modes,
+		"states":       states,
+		"runningModes": modes,
 	})
 }

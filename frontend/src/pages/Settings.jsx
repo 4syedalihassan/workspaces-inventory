@@ -24,6 +24,7 @@ import {
   EditOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { API_BASE } from '../api';
 
@@ -33,6 +34,7 @@ function Settings() {
   const [activeTab, setActiveTab] = useState('general');
   const [users, setUsers] = useState([]);
   const [awsAccounts, setAwsAccounts] = useState([]);
+  const [ldapServers, setLdapServers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // User Management State
@@ -75,15 +77,19 @@ function Settings() {
     isDefault: false
   });
 
-  // LDAP Integration State
-  const [ldapSettings, setLdapSettings] = useState({
-    enabled: false,
+  // LDAP Server Integration State
+  const [showAddLDAP, setShowAddLDAP] = useState(false);
+  const [showEditLDAP, setShowEditLDAP] = useState(false);
+  const [showDeleteLDAP, setShowDeleteLDAP] = useState(false);
+  const [selectedLDAP, setSelectedLDAP] = useState(null);
+  const [newLDAPServer, setNewLDAPServer] = useState({
+    name: '',
     serverUrl: '',
-    baseDN: '',
+    baseDn: '',
     bindUsername: '',
     bindPassword: '',
     searchFilter: '(sAMAccountName={username})',
-    syncEnabled: false
+    isDefault: false
   });
 
   useEffect(() => {
@@ -93,7 +99,7 @@ function Settings() {
       loadUsers();
     } else if (activeTab === 'integrations') {
       loadAWSAccounts();
-      loadLdapSettings();
+      loadLDAPServers();
     }
   }, [activeTab]);
 
@@ -407,70 +413,210 @@ function Settings() {
     }
   };
 
-  // LDAP Integration Functions
-  const loadLdapSettings = async () => {
+  const syncAWSAccount = async (accountId, accountName) => {
     try {
-      const response = await apiFetch(`${API_BASE}/admin/settings`);
+      message.loading({ content: `Starting sync for ${accountName}...`, key: 'sync', duration: 0 });
+      const response = await apiFetch(`${API_BASE}/admin/aws-accounts/${accountId}/sync`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        message.success({ 
+          content: `Sync started for ${accountName}. This may take a few minutes.`, 
+          key: 'sync',
+          duration: 3
+        });
+        // Reload accounts after a delay to see updated sync time
+        // Sync runs asynchronously, so we wait longer to ensure it completes
+        setTimeout(() => loadAWSAccounts(), 5000);
+      } else {
+        let errorMsg = 'Failed to start sync';
+        try {
+          const data = await response.json();
+          errorMsg = data.error || errorMsg;
+        } catch (e) {
+          // response was not JSON, keep default errorMsg
+        }
+        message.error({ content: errorMsg, key: 'sync' });
+      }
+    } catch (error) {
+      message.error({ content: 'Error syncing AWS account: ' + error.message, key: 'sync' });
+    }
+  };
+
+  // LDAP Server Integration Functions
+  const loadLDAPServers = async () => {
+    setLoading(true);
+    try {
+      const response = await apiFetch(`${API_BASE}/admin/ldap-servers`);
       if (response.ok) {
         const data = await response.json();
-        const settingsMap = {};
-        data.settings.forEach(setting => {
-          settingsMap[setting.key] = setting.value;
-        });
-        setLdapSettings({
-          enabled: settingsMap['ad.sync_enabled'] === 'true',
-          serverUrl: settingsMap['ad.server_url'] || '',
-          baseDN: settingsMap['ad.base_dn'] || '',
-          bindUsername: settingsMap['ad.bind_username'] || '',
-          bindPassword: '',
-          searchFilter: settingsMap['ad.search_filter'] || '(sAMAccountName={username})',
-          syncEnabled: settingsMap['ad.sync_enabled'] === 'true'
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load LDAP settings:', error);
-    }
-  };
-
-  const saveLdapSettings = async () => {
-    try {
-      const settings = [
-        { key: 'ad.server_url', value: ldapSettings.serverUrl },
-        { key: 'ad.base_dn', value: ldapSettings.baseDN },
-        { key: 'ad.bind_username', value: ldapSettings.bindUsername },
-        { key: 'ad.sync_enabled', value: ldapSettings.syncEnabled.toString() },
-        { key: 'ad.search_filter', value: ldapSettings.searchFilter }
-      ];
-
-      if (ldapSettings.bindPassword) {
-        settings.push({ key: 'ad.bind_password', value: ldapSettings.bindPassword });
-      }
-
-      const response = await apiFetch(`${API_BASE}/admin/settings`, {
-        method: 'PUT',
-        body: JSON.stringify({ settings })
-      });
-
-      if (response.ok) {
-        message.success('LDAP settings saved successfully');
-        loadLdapSettings();
+        setLdapServers(data.servers || []);
       } else {
-        message.error('Failed to save LDAP settings');
+        setLdapServers([]);
       }
     } catch (error) {
-      message.error('Error saving LDAP settings: ' + error.message);
+      console.error('Failed to load LDAP servers:', error);
+      setLdapServers([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const testLdapConnection = async () => {
+  const addLDAPServer = async () => {
+    if (!newLDAPServer.name || !newLDAPServer.serverUrl || !newLDAPServer.baseDn || !newLDAPServer.bindUsername || !newLDAPServer.bindPassword) {
+      message.error('Please fill in all required fields');
+      return;
+    }
     try {
-      await saveLdapSettings();
-      message.info('Testing LDAP connection...');
-      setTimeout(() => {
-        message.info('LDAP connection test - please check backend logs');
-      }, 1000);
+      const response = await apiFetch(`${API_BASE}/admin/ldap-servers`, {
+        method: 'POST',
+        body: JSON.stringify(newLDAPServer)
+      });
+      if (response.ok) {
+        setShowAddLDAP(false);
+        loadLDAPServers();
+        message.success('LDAP server added successfully');
+        setNewLDAPServer({
+          name: '',
+          serverUrl: '',
+          baseDn: '',
+          bindUsername: '',
+          bindPassword: '',
+          searchFilter: '(sAMAccountName={username})',
+          isDefault: false
+        });
+      } else {
+        let errorMsg = 'Failed to add LDAP server';
+        try {
+          const data = await response.json();
+          errorMsg = data.error || errorMsg;
+        } catch (e) {
+          // Response was not JSON, keep default error message
+        }
+        message.error(errorMsg);
+      }
+    } catch (error) {
+      message.error('Error adding LDAP server: ' + error.message);
+    }
+  };
+
+  const editLDAPServer = (server) => {
+    setSelectedLDAP(server);
+    setNewLDAPServer({
+      name: server.name,
+      serverUrl: server.serverUrl,
+      baseDn: server.baseDn,
+      bindUsername: server.bindUsername,
+      bindPassword: '',
+      searchFilter: server.searchFilter,
+      isDefault: server.isDefault
+    });
+    setShowEditLDAP(true);
+  };
+
+  const updateLDAPServer = async () => {
+    try {
+      const response = await apiFetch(`${API_BASE}/admin/ldap-servers/${selectedLDAP.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(newLDAPServer)
+      });
+      if (response.ok) {
+        setShowEditLDAP(false);
+        loadLDAPServers();
+        message.success('LDAP server updated successfully');
+        // Clear form state
+        setNewLDAPServer({
+          name: '',
+          serverUrl: '',
+          baseDn: '',
+          bindUsername: '',
+          bindPassword: '',
+          searchFilter: '(sAMAccountName={username})',
+          isDefault: false
+        });
+        setSelectedLDAP(null);
+      } else {
+        let errorMsg = 'Failed to update LDAP server';
+        try {
+          const data = await response.json();
+          errorMsg = data.error || errorMsg;
+        } catch (e) {
+          // Response was not JSON, keep default error message
+        }
+        message.error(errorMsg);
+      }
+    } catch (error) {
+      message.error('Error updating LDAP server: ' + error.message);
+    }
+  };
+
+  const deleteLDAPServer = (server) => {
+    setSelectedLDAP(server);
+    setShowDeleteLDAP(true);
+  };
+
+  const confirmDeleteLDAP = async () => {
+    try {
+      const response = await apiFetch(`${API_BASE}/admin/ldap-servers/${selectedLDAP.id}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        loadLDAPServers();
+        message.success('LDAP server deleted successfully');
+      } else {
+        message.error('Failed to delete LDAP server');
+      }
+    } catch (error) {
+      message.error('Error deleting LDAP server: ' + error.message);
+    } finally {
+      setShowDeleteLDAP(false);
+      setSelectedLDAP(null);
+    }
+  };
+
+  const testLDAPConnection = async (serverId) => {
+    try {
+      const response = await apiFetch(`${API_BASE}/admin/ldap-servers/${serverId}/test`);
+      if (response.ok) {
+        message.success('LDAP connection test successful');
+        // Reload servers to show updated status
+        loadLDAPServers();
+      } else {
+        message.error('LDAP connection test failed');
+        // Reload servers to show updated status
+        loadLDAPServers();
+      }
     } catch (error) {
       message.error('Error testing LDAP connection: ' + error.message);
+    }
+  };
+
+  const syncLDAPServer = async (serverId, serverName) => {
+    try {
+      message.loading({ content: `Starting sync for ${serverName}...`, key: 'ldap-sync', duration: 0 });
+      const response = await apiFetch(`${API_BASE}/admin/ldap-servers/${serverId}/sync`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        message.success({ 
+          content: `Sync started for ${serverName}. This may take a few minutes.`, 
+          key: 'ldap-sync',
+          duration: 3
+        });
+        // Reload servers after a delay to see updated sync time
+        setTimeout(() => loadLDAPServers(), 5000);
+      } else {
+        let errorMsg = 'Failed to start sync';
+        try {
+          const data = await response.json();
+          errorMsg = data.error || errorMsg;
+        } catch (e) {
+          // Response was not JSON, keep default error message
+        }
+        message.error({ content: errorMsg, key: 'ldap-sync' });
+      }
+    } catch (error) {
+      message.error({ content: 'Error syncing LDAP server: ' + error.message, key: 'ldap-sync' });
     }
   };
 
@@ -571,6 +717,12 @@ function Settings() {
         <Space>
           <Button
             type="text"
+            icon={<SyncOutlined />}
+            onClick={() => syncAWSAccount(record.id, record.name)}
+            title="Sync WorkSpaces"
+          />
+          <Button
+            type="text"
             icon={<CheckCircleOutlined />}
             onClick={() => testAWSConnection(record.id)}
             title="Test Connection"
@@ -579,12 +731,104 @@ function Settings() {
             type="text"
             icon={<EditOutlined />}
             onClick={() => editAWSAccount(record)}
+            title="Edit"
           />
           <Button
             type="text"
             danger
             icon={<DeleteOutlined />}
             onClick={() => deleteAWSAccount(record)}
+            title="Delete"
+          />
+        </Space>
+      ),
+    },
+  ];
+
+  const ldapColumns = [
+    {
+      title: 'Server Name',
+      dataIndex: 'name',
+      key: 'name',
+    },
+    {
+      title: 'Server URL',
+      dataIndex: 'serverUrl',
+      key: 'serverUrl',
+    },
+    {
+      title: 'Base DN',
+      dataIndex: 'baseDn',
+      key: 'baseDn',
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        let color = 'default';
+        let icon = null;
+        if (status === 'connected') {
+          color = 'success';
+          icon = <CheckCircleOutlined />;
+        } else if (status === 'error') {
+          color = 'error';
+          icon = <CloseCircleOutlined />;
+        } else if (status === 'limited') {
+          color = 'warning';
+          icon = <CheckCircleOutlined />;
+        } else if (status === 'pending') {
+          color = 'default';
+          icon = null;
+        }
+        return (
+          <Tag icon={icon} color={color}>
+            {status || 'unknown'}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: 'Default',
+      dataIndex: 'isDefault',
+      key: 'isDefault',
+      render: (isDefault) => isDefault ? <Tag color="blue">Default</Tag> : null,
+    },
+    {
+      title: 'Last Sync',
+      dataIndex: 'lastSync',
+      key: 'lastSync',
+      render: (date) => date ? new Date(date).toLocaleString() : 'Never',
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="text"
+            icon={<SyncOutlined />}
+            onClick={() => syncLDAPServer(record.id, record.name)}
+            title="Sync Users"
+          />
+          <Button
+            type="text"
+            icon={<CheckCircleOutlined />}
+            onClick={() => testLDAPConnection(record.id)}
+            title="Test Connection"
+          />
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={() => editLDAPServer(record)}
+            title="Edit"
+          />
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => deleteLDAPServer(record)}
+            title="Delete"
           />
         </Space>
       ),
@@ -815,92 +1059,30 @@ function Settings() {
             />
           </Card>
 
-          {/* LDAP Integration */}
-          <Card title="LDAP / Active Directory Integration" bordered={false}>
-            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-              Connect to your Active Directory or LDAP server to sync user information
-            </Text>
-            <Row gutter={[16, 16]}>
-              <Col xs={24} md={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>LDAP Server URL</Text>
-                  <Input
-                    placeholder="ldap://dc.example.com:389"
-                    value={ldapSettings.serverUrl}
-                    onChange={(e) => setLdapSettings({...ldapSettings, serverUrl: e.target.value})}
-                  />
-                  <Text type="secondary" style={{ fontSize: '11px' }}>LDAP or LDAPS URL</Text>
+          {/* LDAP Servers */}
+          <Card>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <Title level={5} style={{ margin: 0 }}>LDAP Server Integrations</Title>
+                  <Text type="secondary">Manage multiple LDAP/AD servers for user synchronization</Text>
                 </div>
-              </Col>
-              <Col xs={24} md={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>Base DN</Text>
-                  <Input
-                    placeholder="DC=example,DC=com"
-                    value={ldapSettings.baseDN}
-                    onChange={(e) => setLdapSettings({...ldapSettings, baseDN: e.target.value})}
-                  />
-                  <Text type="secondary" style={{ fontSize: '11px' }}>Base Distinguished Name for user searches</Text>
-                </div>
-              </Col>
-              <Col xs={24} md={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>Bind Username</Text>
-                  <Input
-                    placeholder="CN=admin,DC=example,DC=com"
-                    value={ldapSettings.bindUsername}
-                    onChange={(e) => setLdapSettings({...ldapSettings, bindUsername: e.target.value})}
-                  />
-                  <Text type="secondary" style={{ fontSize: '11px' }}>Username for LDAP bind (full DN)</Text>
-                </div>
-              </Col>
-              <Col xs={24} md={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>Bind Password</Text>
-                  <Input.Password
-                    placeholder="Leave blank to keep existing"
-                    value={ldapSettings.bindPassword}
-                    onChange={(e) => setLdapSettings({...ldapSettings, bindPassword: e.target.value})}
-                  />
-                  <Text type="secondary" style={{ fontSize: '11px' }}>Password for LDAP bind</Text>
-                </div>
-              </Col>
-              <Col xs={24}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>Search Filter</Text>
-                  <Input
-                    placeholder="(sAMAccountName={username})"
-                    value={ldapSettings.searchFilter}
-                    onChange={(e) => setLdapSettings({...ldapSettings, searchFilter: e.target.value})}
-                  />
-                  <Text type="secondary" style={{ fontSize: '11px' }}>LDAP search filter template (use {'{username}'} as placeholder)</Text>
-                </div>
-              </Col>
-              <Col xs={24}>
-                <div style={{ marginBottom: 16 }}>
-                  <Switch
-                    checked={ldapSettings.syncEnabled}
-                    onChange={(checked) => setLdapSettings({...ldapSettings, syncEnabled: checked})}
-                  />
-                  <Text style={{ marginLeft: 8 }}>Enable automatic LDAP user synchronization</Text>
-                  <div style={{ marginLeft: 32, marginTop: 4 }}>
-                    <Text type="secondary" style={{ fontSize: '11px' }}>
-                      When enabled, user information will be synced from LDAP during workspace sync
-                    </Text>
-                  </div>
-                </div>
-              </Col>
-              <Col xs={24}>
-                <Space>
-                  <Button type="primary" onClick={saveLdapSettings}>
-                    Save LDAP Settings
-                  </Button>
-                  <Button onClick={testLdapConnection}>
-                    Test Connection
-                  </Button>
-                </Space>
-              </Col>
-            </Row>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => setShowAddLDAP(true)}
+                >
+                  Add LDAP Server
+                </Button>
+              </div>
+            </div>
+            <Table
+              columns={ldapColumns}
+              dataSource={ldapServers}
+              loading={loading}
+              rowKey="id"
+              size="small"
+            />
           </Card>
         </Space>
       ),
@@ -1084,6 +1266,144 @@ function Settings() {
         <Space direction="vertical">
           <Text>Are you sure you want to delete AWS account "{selectedAWS?.name}"?</Text>
           <Text type="secondary">This will stop syncing data from this AWS account.</Text>
+        </Space>
+      </Modal>
+
+      {/* Add LDAP Server Modal */}
+      <Modal
+        title="Add LDAP Server"
+        open={showAddLDAP}
+        onOk={addLDAPServer}
+        onCancel={() => {
+          setShowAddLDAP(false);
+          // Clear form state
+          setNewLDAPServer({
+            name: '',
+            serverUrl: '',
+            baseDn: '',
+            bindUsername: '',
+            bindPassword: '',
+            searchFilter: '(sAMAccountName={username})',
+            isDefault: false
+          });
+        }}
+        width={600}
+      >
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Input
+            placeholder="Server Name (e.g., Primary AD)"
+            value={newLDAPServer.name}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, name: e.target.value})}
+          />
+          <Input
+            placeholder="Server URL (e.g., ldap://dc.example.com:389)"
+            value={newLDAPServer.serverUrl}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, serverUrl: e.target.value})}
+          />
+          <Input
+            placeholder="Base DN (e.g., DC=example,DC=com)"
+            value={newLDAPServer.baseDn}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, baseDn: e.target.value})}
+          />
+          <Input
+            placeholder="Bind Username (e.g., CN=admin,DC=example,DC=com)"
+            value={newLDAPServer.bindUsername}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, bindUsername: e.target.value})}
+          />
+          <Input.Password
+            placeholder="Bind Password"
+            value={newLDAPServer.bindPassword}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, bindPassword: e.target.value})}
+          />
+          <Input
+            placeholder="Search Filter (default: (sAMAccountName={username}))"
+            value={newLDAPServer.searchFilter}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, searchFilter: e.target.value})}
+          />
+          <div>
+            <Switch
+              checked={newLDAPServer.isDefault}
+              onChange={(checked) => setNewLDAPServer({...newLDAPServer, isDefault: checked})}
+            />
+            <Text style={{ marginLeft: 8 }}>Set as default server</Text>
+          </div>
+        </Space>
+      </Modal>
+
+      {/* Edit LDAP Server Modal */}
+      <Modal
+        title="Edit LDAP Server"
+        open={showEditLDAP}
+        onOk={updateLDAPServer}
+        onCancel={() => {
+          setShowEditLDAP(false);
+          // Clear form state and selected server
+          setNewLDAPServer({
+            name: '',
+            serverUrl: '',
+            baseDn: '',
+            bindUsername: '',
+            bindPassword: '',
+            searchFilter: '(sAMAccountName={username})',
+            isDefault: false
+          });
+          setSelectedLDAP(null);
+        }}
+        width={600}
+      >
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Input
+            placeholder="Server Name"
+            value={newLDAPServer.name}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, name: e.target.value})}
+          />
+          <Input
+            placeholder="Server URL"
+            value={newLDAPServer.serverUrl}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, serverUrl: e.target.value})}
+          />
+          <Input
+            placeholder="Base DN"
+            value={newLDAPServer.baseDn}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, baseDn: e.target.value})}
+          />
+          <Input
+            placeholder="Bind Username"
+            value={newLDAPServer.bindUsername}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, bindUsername: e.target.value})}
+          />
+          <Input.Password
+            placeholder="Bind Password (leave blank to keep existing)"
+            value={newLDAPServer.bindPassword}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, bindPassword: e.target.value})}
+          />
+          <Input
+            placeholder="Search Filter"
+            value={newLDAPServer.searchFilter}
+            onChange={(e) => setNewLDAPServer({...newLDAPServer, searchFilter: e.target.value})}
+          />
+          <div>
+            <Switch
+              checked={newLDAPServer.isDefault}
+              onChange={(checked) => setNewLDAPServer({...newLDAPServer, isDefault: checked})}
+            />
+            <Text style={{ marginLeft: 8 }}>Set as default server</Text>
+          </div>
+        </Space>
+      </Modal>
+
+      {/* Delete LDAP Server Confirmation */}
+      <Modal
+        title="Confirm Delete"
+        open={showDeleteLDAP}
+        onOk={confirmDeleteLDAP}
+        onCancel={() => setShowDeleteLDAP(false)}
+        okText="Delete"
+        okButtonProps={{ danger: true }}
+      >
+        <Space direction="vertical">
+          <Text>Are you sure you want to delete LDAP server "{selectedLDAP?.name}"?</Text>
+          <Text type="secondary">This will stop syncing user data from this LDAP server.</Text>
         </Space>
       </Modal>
     </div>

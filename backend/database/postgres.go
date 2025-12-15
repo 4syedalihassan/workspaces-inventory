@@ -389,7 +389,6 @@ func RunMigrations() error {
 					UNIQUE(name)
 				);
 
-				-- Create index on is_default for quick lookups
 				CREATE INDEX IF NOT EXISTS idx_aws_accounts_default ON aws_accounts(is_default) WHERE is_default = true;
 
 				-- Create index on is_active
@@ -433,6 +432,51 @@ func RunMigrations() error {
 
 				CREATE INDEX IF NOT EXISTS idx_cloudtrail_aws_account_id ON cloudtrail_events(aws_account_id);
 				CREATE INDEX IF NOT EXISTS idx_billing_aws_account_id ON billing_data(aws_account_id);
+			`,
+		},
+		{
+			version: 12,
+			sql: `
+				-- Create ldap_servers table for managing multiple LDAP/AD servers
+				CREATE TABLE IF NOT EXISTS ldap_servers (
+					id SERIAL PRIMARY KEY,
+					name VARCHAR(255) NOT NULL,
+					server_url VARCHAR(255) NOT NULL,
+					base_dn VARCHAR(255) NOT NULL,
+					bind_username VARCHAR(255) NOT NULL,
+					bind_password TEXT NOT NULL,
+					search_filter VARCHAR(255) DEFAULT '(sAMAccountName={username})',
+					is_default BOOLEAN DEFAULT false,
+					is_active BOOLEAN DEFAULT true,
+					status VARCHAR(50) DEFAULT 'pending',
+					last_sync TIMESTAMP,
+					created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+					updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				);
+
+				-- Create unique index on name for active servers only
+				CREATE UNIQUE INDEX IF NOT EXISTS idx_ldap_servers_unique_name_active ON ldap_servers(name) WHERE is_active = true;
+
+				-- Create index on is_active
+				CREATE INDEX IF NOT EXISTS idx_ldap_servers_active ON ldap_servers(is_active);
+
+				-- Ensure only one default LDAP server (this also serves as index for is_default)
+				CREATE UNIQUE INDEX IF NOT EXISTS idx_ldap_servers_one_default ON ldap_servers(is_default) WHERE is_default = true;
+
+				-- Add updated_at trigger
+				CREATE OR REPLACE FUNCTION update_ldap_servers_updated_at()
+				RETURNS TRIGGER AS $$
+				BEGIN
+					NEW.updated_at = CURRENT_TIMESTAMP;
+					RETURN NEW;
+				END;
+				$$ LANGUAGE plpgsql;
+
+				DROP TRIGGER IF EXISTS trigger_ldap_servers_updated_at ON ldap_servers;
+				CREATE TRIGGER trigger_ldap_servers_updated_at
+					BEFORE UPDATE ON ldap_servers
+					FOR EACH ROW
+					EXECUTE FUNCTION update_ldap_servers_updated_at();
 			`,
 		},
 	}

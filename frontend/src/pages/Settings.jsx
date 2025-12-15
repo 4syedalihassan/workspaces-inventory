@@ -429,8 +429,14 @@ function Settings() {
         // Sync runs asynchronously, so we wait longer to ensure it completes
         setTimeout(() => loadAWSAccounts(), 5000);
       } else {
-        const data = await response.json();
-        message.error({ content: data.error || 'Failed to start sync', key: 'sync' });
+        let errorMsg = 'Failed to start sync';
+        try {
+          const data = await response.json();
+          errorMsg = data.error || errorMsg;
+        } catch (e) {
+          // response was not JSON, keep default errorMsg
+        }
+        message.error({ content: errorMsg, key: 'sync' });
       }
     } catch (error) {
       message.error({ content: 'Error syncing AWS account: ' + error.message, key: 'sync' });

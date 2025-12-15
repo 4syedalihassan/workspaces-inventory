@@ -115,23 +115,25 @@ func (h *LDAPServerHandler) UpdateLDAPServer(c *gin.Context) {
 		return
 	}
 
-	// If credentials were updated, test connection
-	if req.BindPassword != "" {
+	// If any connection-related field was updated, test connection
+	if req.ServerURL != "" || req.BindUsername != "" || req.BindPassword != "" {
+		// Get current values from DB
+		server, _ := models.GetLDAPServerByID(h.DB, id)
 		serverURL := req.ServerURL
 		bindUsername := req.BindUsername
-		if serverURL == "" || bindUsername == "" {
-			// Get current values from DB
-			server, _ := models.GetLDAPServerByID(h.DB, id)
-			if server != nil {
-				if serverURL == "" {
-					serverURL = server.ServerURL
-				}
-				if bindUsername == "" {
-					bindUsername = server.BindUsername
-				}
+		bindPassword := req.BindPassword
+		if server != nil {
+			if serverURL == "" {
+				serverURL = server.ServerURL
+			}
+			if bindUsername == "" {
+				bindUsername = server.BindUsername
+			}
+			if bindPassword == "" {
+				bindPassword = server.BindPassword
 			}
 		}
-		go h.testLDAPConnection(id, serverURL, bindUsername, req.BindPassword)
+		go h.testLDAPConnection(id, serverURL, bindUsername, bindPassword)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "LDAP server updated successfully"})

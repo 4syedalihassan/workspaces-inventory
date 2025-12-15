@@ -34,6 +34,7 @@ function Settings() {
   const [activeTab, setActiveTab] = useState('general');
   const [users, setUsers] = useState([]);
   const [awsAccounts, setAwsAccounts] = useState([]);
+  const [ldapServers, setLdapServers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // User Management State

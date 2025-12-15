@@ -54,6 +54,7 @@ func main() {
 	cloudtrailHandler := &handlers.CloudTrailHandler{DB: db}
 	notificationsHandler := &handlers.NotificationsHandler{DB: db}
 	awsAccountHandler := &handlers.AWSAccountHandler{DB: db}
+	ldapServerHandler := &handlers.LDAPServerHandler{DB: db}
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -160,6 +161,15 @@ func main() {
 			admin.DELETE("/aws-accounts/:id", awsAccountHandler.DeleteAWSAccount)
 			admin.GET("/aws-accounts/:id/test", awsAccountHandler.TestAWSConnection)
 			admin.POST("/aws-accounts/:id/sync", awsAccountHandler.SyncAWSAccount)
+
+			// LDAP Server management
+			admin.GET("/ldap-servers", ldapServerHandler.ListLDAPServers)
+			admin.GET("/ldap-servers/:id", ldapServerHandler.GetLDAPServer)
+			admin.POST("/ldap-servers", ldapServerHandler.CreateLDAPServer)
+			admin.PUT("/ldap-servers/:id", ldapServerHandler.UpdateLDAPServer)
+			admin.DELETE("/ldap-servers/:id", ldapServerHandler.DeleteLDAPServer)
+			admin.GET("/ldap-servers/:id/test", ldapServerHandler.TestLDAPConnection)
+			admin.POST("/ldap-servers/:id/sync", ldapServerHandler.SyncLDAPServer)
 
 			// Integration tests (legacy)
 			admin.POST("/test/aws", adminHandler.TestAWSConnection)

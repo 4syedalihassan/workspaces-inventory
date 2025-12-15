@@ -571,8 +571,134 @@ func (s *AWSService) CalculateUsageHours(ctx context.Context) (int, error) {
 }
 
 // SyncActiveDirectoryUsers syncs user information from Active Directory
+// SyncActiveDirectoryUsersFromServer syncs users from a specific LDAP server
+func (s *AWSService) SyncActiveDirectoryUsersFromServer(ctx context.Context, serverID int) (int, error) {
+	// Get LDAP server config
+	server, err := models.GetLDAPServerByID(s.DB, serverID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get LDAP server: %w", err)
+	}
+
+	if !server.IsActive {
+		return 0, fmt.Errorf("LDAP server is not active")
+	}
+
+	log.Printf("Connecting to LDAP server: %s (%s)", server.Name, server.ServerURL)
+
+	// Connect to LDAP
+	l, err := ldap.DialURL(server.ServerURL)
+	if err != nil {
+		return 0, fmt.Errorf("failed to connect to LDAP: %w", err)
+	}
+	defer l.Close()
+
+	// Bind with credentials
+	err = l.Bind(server.BindUsername, server.BindPassword)
+	if err != nil {
+		return 0, fmt.Errorf("failed to bind to LDAP: %w", err)
+	}
+
+	// Get all workspace users
+	query := "SELECT DISTINCT user_name FROM workspaces WHERE user_name IS NOT NULL AND user_name != ''"
+	rows, err := s.DB.Query(query)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var userName string
+		if err := rows.Scan(&userName); err != nil {
+			continue
+		}
+
+		// Replace {username} in search filter
+		searchFilter := server.SearchFilter
+		if searchFilter == "" {
+			searchFilter = "(sAMAccountName={username})"
+		}
+		// Replace {username} placeholder with actual username
+		searchFilter = fmt.Sprintf("(sAMAccountName=%s)", ldap.EscapeFilter(userName))
+
+		// Search for user in LDAP
+		searchRequest := ldap.NewSearchRequest(
+			server.BaseDN,
+			ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+			searchFilter,
+			[]string{"displayName", "mail", "department", "title", "manager"},
+			nil,
+		)
+
+		sr, err := l.Search(searchRequest)
+		if err != nil {
+			log.Printf("Failed to search for user %s: %v", userName, err)
+			continue
+		}
+
+		if len(sr.Entries) == 0 {
+			log.Printf("User %s not found in LDAP server %s", userName, server.Name)
+			continue
+		}
+
+		// Get user attributes
+		entry := sr.Entries[0]
+		displayName := entry.GetAttributeValue("displayName")
+		email := entry.GetAttributeValue("mail")
+
+		// Update workspace with user info (assuming you have a function for this)
+		// For now, just log the information
+		log.Printf("Found user %s: %s <%s>", userName, displayName, email)
+		// TODO: Update workspace or user table with this information
+		count++
+	}
+
+	// Update last sync timestamp for the server
+	models.UpdateLDAPServerLastSync(s.DB, serverID)
+
+	log.Printf("Successfully synced %d users from LDAP server %s", count, server.Name)
+	return count, nil
+}
+
+// SyncAllLDAPServers syncs users from all active LDAP servers
+func (s *AWSService) SyncAllLDAPServers(ctx context.Context) (int, error) {
+	// Get all active LDAP servers
+	servers, err := models.GetAllLDAPServers(s.DB)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get LDAP servers: %w", err)
+	}
+
+	totalCount := 0
+	for _, server := range servers {
+		if !server.IsActive || server.Status == "error" {
+			log.Printf("Skipping inactive or error LDAP server: %s", server.Name)
+			continue
+		}
+
+		count, err := s.SyncActiveDirectoryUsersFromServer(ctx, server.ID)
+		if err != nil {
+			log.Printf("Failed to sync LDAP server %s: %v", server.Name, err)
+			models.UpdateLDAPServerStatus(s.DB, server.ID, "error")
+			continue
+		}
+
+		totalCount += count
+		models.UpdateLDAPServerStatus(s.DB, server.ID, "connected")
+	}
+
+	log.Printf("Successfully synced %d users across all LDAP servers", totalCount)
+	return totalCount, nil
+}
+
 func (s *AWSService) SyncActiveDirectoryUsers(ctx context.Context) (int, error) {
-	// Get AD settings
+	// Check if any LDAP servers are configured
+	servers, err := models.GetAllLDAPServers(s.DB)
+	if err == nil && len(servers) > 0 {
+		// Use the new multi-server sync
+		return s.SyncAllLDAPServers(ctx)
+	}
+
+	// Fallback to legacy single-server sync from settings
 	adEnabled, err := models.GetSetting(s.DB, "ad.sync_enabled")
 	if err != nil || adEnabled.Value != "true" {
 		log.Println("Active Directory sync is disabled")

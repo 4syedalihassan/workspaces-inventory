@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/4syedalihassan/workspaces-inventory/models"
@@ -618,8 +619,8 @@ func (s *AWSService) SyncActiveDirectoryUsersFromServer(ctx context.Context, ser
 		if searchFilter == "" {
 			searchFilter = "(sAMAccountName={username})"
 		}
-		// Replace {username} placeholder with actual username
-		searchFilter = fmt.Sprintf("(sAMAccountName=%s)", ldap.EscapeFilter(userName))
+		// Replace {username} placeholder with actual escaped username
+		searchFilter = strings.ReplaceAll(searchFilter, "{username}", ldap.EscapeFilter(userName))
 
 		// Search for user in LDAP
 		searchRequest := ldap.NewSearchRequest(

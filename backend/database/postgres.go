@@ -389,7 +389,6 @@ func RunMigrations() error {
 					UNIQUE(name)
 				);
 
-				-- Create index on is_default for quick lookups
 				CREATE INDEX IF NOT EXISTS idx_aws_accounts_default ON aws_accounts(is_default) WHERE is_default = true;
 
 				-- Create index on is_active
@@ -452,18 +451,16 @@ func RunMigrations() error {
 					status VARCHAR(50) DEFAULT 'pending',
 					last_sync TIMESTAMP,
 					created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-					updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
+					updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 				);
 
 				-- Create unique index on name for active servers only
 				CREATE UNIQUE INDEX IF NOT EXISTS idx_ldap_servers_unique_name_active ON ldap_servers(name) WHERE is_active = true;
-				-- Create index on is_default for quick lookups
 
 				-- Create index on is_active
 				CREATE INDEX IF NOT EXISTS idx_ldap_servers_active ON ldap_servers(is_active);
 
-				-- Ensure only one default LDAP server
+				-- Ensure only one default LDAP server (this also serves as index for is_default)
 				CREATE UNIQUE INDEX IF NOT EXISTS idx_ldap_servers_one_default ON ldap_servers(is_default) WHERE is_default = true;
 
 				-- Add updated_at trigger

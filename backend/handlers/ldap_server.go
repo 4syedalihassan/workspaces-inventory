@@ -82,6 +82,8 @@ func (h *LDAPServerHandler) CreateLDAPServer(c *gin.Context) {
 	// Try to test connection in background
 	go h.testLDAPConnection(server.ID, server.ServerURL, server.BindUsername, server.BindPassword)
 
+	// Clear password before returning (extra safety even though json:"-" tag is present)
+	server.BindPassword = ""
 	c.JSON(http.StatusCreated, server)
 }
 

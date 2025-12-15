@@ -157,20 +157,42 @@ func UpdateLDAPServer(db *sql.DB, id int, req UpdateLDAPServerRequest) error {
 		}
 	}
 
-	// Build dynamic update query based on what's provided
-	query := `
-		UPDATE ldap_servers
-		SET name = COALESCE(NULLIF($1, ''), name),
-		    server_url = COALESCE(NULLIF($2, ''), server_url),
-		    base_dn = COALESCE(NULLIF($3, ''), base_dn),
-		    bind_username = COALESCE(NULLIF($4, ''), bind_username),
-		    bind_password = COALESCE(NULLIF($5, ''), bind_password),
-		    search_filter = COALESCE(NULLIF($6, ''), search_filter),
-		    is_default = $7,
-		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = $8 AND is_active = true
-	`
-	_, err := db.Exec(query, req.Name, req.ServerURL, req.BaseDN, req.BindUsername, req.BindPassword, req.SearchFilter, req.IsDefault, id)
+	// Build dynamic update query - only update password if provided
+	var query string
+	var args []interface{}
+	
+	if req.BindPassword != "" {
+		// Update all fields including password
+		query = `
+			UPDATE ldap_servers
+			SET name = COALESCE(NULLIF($1, ''), name),
+			    server_url = COALESCE(NULLIF($2, ''), server_url),
+			    base_dn = COALESCE(NULLIF($3, ''), base_dn),
+			    bind_username = COALESCE(NULLIF($4, ''), bind_username),
+			    bind_password = $5,
+			    search_filter = COALESCE(NULLIF($6, ''), search_filter),
+			    is_default = $7,
+			    updated_at = CURRENT_TIMESTAMP
+			WHERE id = $8 AND is_active = true
+		`
+		args = []interface{}{req.Name, req.ServerURL, req.BaseDN, req.BindUsername, req.BindPassword, req.SearchFilter, req.IsDefault, id}
+	} else {
+		// Update all fields except password
+		query = `
+			UPDATE ldap_servers
+			SET name = COALESCE(NULLIF($1, ''), name),
+			    server_url = COALESCE(NULLIF($2, ''), server_url),
+			    base_dn = COALESCE(NULLIF($3, ''), base_dn),
+			    bind_username = COALESCE(NULLIF($4, ''), bind_username),
+			    search_filter = COALESCE(NULLIF($5, ''), search_filter),
+			    is_default = $6,
+			    updated_at = CURRENT_TIMESTAMP
+			WHERE id = $7 AND is_active = true
+		`
+		args = []interface{}{req.Name, req.ServerURL, req.BaseDN, req.BindUsername, req.SearchFilter, req.IsDefault, id}
+	}
+	
+	_, err := db.Exec(query, args...)
 	return err
 }
 

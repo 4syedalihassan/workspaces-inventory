@@ -486,8 +486,14 @@ function Settings() {
           isDefault: false
         });
       } else {
-        const data = await response.json();
-        message.error(data.error || 'Failed to add LDAP server');
+        let errorMsg = 'Failed to add LDAP server';
+        try {
+          const data = await response.json();
+          errorMsg = data.error || errorMsg;
+        } catch (e) {
+          // Response was not JSON, keep default error message
+        }
+        message.error(errorMsg);
       }
     } catch (error) {
       message.error('Error adding LDAP server: ' + error.message);
@@ -518,9 +524,26 @@ function Settings() {
         setShowEditLDAP(false);
         loadLDAPServers();
         message.success('LDAP server updated successfully');
+        // Clear form state
+        setNewLDAPServer({
+          name: '',
+          serverUrl: '',
+          baseDn: '',
+          bindUsername: '',
+          bindPassword: '',
+          searchFilter: '(sAMAccountName={username})',
+          isDefault: false
+        });
+        setSelectedLDAP(null);
       } else {
-        const data = await response.json();
-        message.error(data.error || 'Failed to update LDAP server');
+        let errorMsg = 'Failed to update LDAP server';
+        try {
+          const data = await response.json();
+          errorMsg = data.error || errorMsg;
+        } catch (e) {
+          // Response was not JSON, keep default error message
+        }
+        message.error(errorMsg);
       }
     } catch (error) {
       message.error('Error updating LDAP server: ' + error.message);
@@ -556,8 +579,12 @@ function Settings() {
       const response = await apiFetch(`${API_BASE}/admin/ldap-servers/${serverId}/test`);
       if (response.ok) {
         message.success('LDAP connection test successful');
+        // Reload servers to show updated status
+        loadLDAPServers();
       } else {
         message.error('LDAP connection test failed');
+        // Reload servers to show updated status
+        loadLDAPServers();
       }
     } catch (error) {
       message.error('Error testing LDAP connection: ' + error.message);
@@ -579,8 +606,14 @@ function Settings() {
         // Reload servers after a delay to see updated sync time
         setTimeout(() => loadLDAPServers(), 5000);
       } else {
-        const data = await response.json();
-        message.error({ content: data.error || 'Failed to start sync', key: 'ldap-sync' });
+        let errorMsg = 'Failed to start sync';
+        try {
+          const data = await response.json();
+          errorMsg = data.error || errorMsg;
+        } catch (e) {
+          // Response was not JSON, keep default error message
+        }
+        message.error({ content: errorMsg, key: 'ldap-sync' });
       }
     } catch (error) {
       message.error({ content: 'Error syncing LDAP server: ' + error.message, key: 'ldap-sync' });
@@ -732,14 +765,28 @@ function Settings() {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Tag
-          icon={status === 'connected' ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-          color={status === 'connected' ? 'success' : 'error'}
-        >
-          {status || 'unknown'}
-        </Tag>
-      ),
+      render: (status) => {
+        let color = 'default';
+        let icon = null;
+        if (status === 'connected') {
+          color = 'success';
+          icon = <CheckCircleOutlined />;
+        } else if (status === 'error') {
+          color = 'error';
+          icon = <CloseCircleOutlined />;
+        } else if (status === 'limited') {
+          color = 'warning';
+          icon = <CheckCircleOutlined />;
+        } else if (status === 'pending') {
+          color = 'default';
+          icon = null;
+        }
+        return (
+          <Tag icon={icon} color={color}>
+            {status || 'unknown'}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Default',
@@ -1227,7 +1274,19 @@ function Settings() {
         title="Add LDAP Server"
         open={showAddLDAP}
         onOk={addLDAPServer}
-        onCancel={() => setShowAddLDAP(false)}
+        onCancel={() => {
+          setShowAddLDAP(false);
+          // Clear form state
+          setNewLDAPServer({
+            name: '',
+            serverUrl: '',
+            baseDn: '',
+            bindUsername: '',
+            bindPassword: '',
+            searchFilter: '(sAMAccountName={username})',
+            isDefault: false
+          });
+        }}
         width={600}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -1276,7 +1335,20 @@ function Settings() {
         title="Edit LDAP Server"
         open={showEditLDAP}
         onOk={updateLDAPServer}
-        onCancel={() => setShowEditLDAP(false)}
+        onCancel={() => {
+          setShowEditLDAP(false);
+          // Clear form state and selected server
+          setNewLDAPServer({
+            name: '',
+            serverUrl: '',
+            baseDn: '',
+            bindUsername: '',
+            bindPassword: '',
+            searchFilter: '(sAMAccountName={username})',
+            isDefault: false
+          });
+          setSelectedLDAP(null);
+        }}
         width={600}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>

@@ -8,7 +8,7 @@ import (
 
 // Workspace represents an AWS WorkSpace
 type Workspace struct {
-	WorkspaceID                         string          `json:"id" db:"workspace_id"`
+	WorkspaceID                         string          `json:"workspace_id" db:"workspace_id"`
 	UserName                            string          `json:"user_name" db:"user_name"`
 	DisplayName                         string          `json:"user_display_name" db:"display_name"`
 	DirectoryID                         string          `json:"directory_id" db:"directory_id"`

@@ -410,14 +410,19 @@ function Settings() {
 
   const syncAWSAccount = async (accountId, accountName) => {
     try {
-      message.loading({ content: `Syncing ${accountName}...`, key: 'sync', duration: 0 });
+      message.loading({ content: `Starting sync for ${accountName}...`, key: 'sync', duration: 0 });
       const response = await apiFetch(`${API_BASE}/admin/aws-accounts/${accountId}/sync`, {
         method: 'POST'
       });
       if (response.ok) {
-        message.success({ content: `Sync started for ${accountName}`, key: 'sync' });
-        // Reload accounts to see updated sync time
-        setTimeout(() => loadAWSAccounts(), 2000);
+        message.success({ 
+          content: `Sync started for ${accountName}. This may take a few minutes.`, 
+          key: 'sync',
+          duration: 3
+        });
+        // Reload accounts after a delay to see updated sync time
+        // Sync runs asynchronously, so we wait longer to ensure it completes
+        setTimeout(() => loadAWSAccounts(), 5000);
       } else {
         const data = await response.json();
         message.error({ content: data.error || 'Failed to start sync', key: 'sync' });

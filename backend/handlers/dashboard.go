@@ -58,20 +58,26 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 
 	// Get last sync timestamp
 	var lastSyncTime sql.NullString
-	h.DB.QueryRow(`
+	err = h.DB.QueryRow(`
 		SELECT TO_CHAR(completed_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
 		FROM sync_history
 		WHERE status = 'completed'
 		ORDER BY completed_at DESC
 		LIMIT 1
 	`).Scan(&lastSyncTime)
-	if lastSyncTime.Valid {
+	// Only set LastSync if query succeeds and value is valid
+	if err == nil && lastSyncTime.Valid {
 		stats.LastSync = &lastSyncTime.String
 	}
 
 	// Get recent activity
-	history, _ := models.ListSyncHistory(h.DB, 10)
-	stats.RecentActivity = history
+	history, err := models.ListSyncHistory(h.DB, 10)
+	if err != nil {
+		// If there's an error, return empty history
+		stats.RecentActivity = []models.SyncHistory{}
+	} else {
+		stats.RecentActivity = history
+	}
 
 	c.JSON(http.StatusOK, stats)
 }

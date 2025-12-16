@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
 	"github.com/4syedalihassan/workspaces-inventory/models"
 	"github.com/gin-gonic/gin"
@@ -13,12 +14,14 @@ type DashboardHandler struct {
 }
 
 type DashboardStats struct {
-	TotalWorkspaces     int     `json:"total_workspaces"`
-	ActiveWorkspaces    int     `json:"active_workspaces"`
-	StoppedWorkspaces   int     `json:"stopped_workspaces"`
-	TerminatedWorkspaces int    `json:"terminated_workspaces"`
-	TotalMonthlyCost    float64 `json:"total_monthly_cost"`
-	RecentActivity      []models.SyncHistory `json:"recent_activity"`
+	TotalWorkspaces      int                    `json:"total_workspaces"`
+	ActiveWorkspaces     int                    `json:"active_workspaces"`
+	StoppedWorkspaces    int                    `json:"stopped_workspaces"`
+	TerminatedWorkspaces int                    `json:"terminated_workspaces"`
+	TotalMonthlyCost     float64                `json:"total_monthly_cost"`
+	CurrentMonthUsage    map[string]interface{} `json:"current_month_usage"`
+	LastSync             *string                `json:"last_sync,omitempty"`
+	RecentActivity       []models.SyncHistory   `json:"recent_activity"`
 }
 
 // GetStats returns dashboard statistics
@@ -40,9 +43,41 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 		WHERE start_date >= DATE_TRUNC('month', CURRENT_DATE)
 	`).Scan(&stats.TotalMonthlyCost)
 
+	// Get current month usage statistics
+	currentMonth := getCurrentYearMonth()
+	usageSummary, err := models.GetMonthlyUsageSummary(h.DB, currentMonth)
+	if err != nil {
+		// If there's an error, return empty usage stats
+		stats.CurrentMonthUsage = map[string]interface{}{
+			"total_hours": 0.0,
+			"avg_hours":   0.0,
+		}
+	} else {
+		stats.CurrentMonthUsage = usageSummary
+	}
+
+	// Get last sync timestamp
+	var lastSyncTime sql.NullString
+	h.DB.QueryRow(`
+		SELECT TO_CHAR(completed_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+		FROM sync_history
+		WHERE status = 'completed'
+		ORDER BY completed_at DESC
+		LIMIT 1
+	`).Scan(&lastSyncTime)
+	if lastSyncTime.Valid {
+		stats.LastSync = &lastSyncTime.String
+	}
+
 	// Get recent activity
 	history, _ := models.ListSyncHistory(h.DB, 10)
 	stats.RecentActivity = history
 
 	c.JSON(http.StatusOK, stats)
+}
+
+// getCurrentYearMonth returns the current year-month in YYYY-MM format
+func getCurrentYearMonth() string {
+	now := time.Now()
+	return now.Format("2006-01")
 }

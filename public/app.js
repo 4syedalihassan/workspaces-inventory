@@ -132,7 +132,7 @@ async function loadWorkspaces() {
         const tbody = document.querySelector('#workspacesTable tbody');
         tbody.innerHTML = data.data.map(ws => `
             <tr>
-                <td><code>${ws.id}</code></td>
+                <td><code>${ws.workspace_id}</code></td>
                 <td>${ws.user_name || '-'}</td>
                 <td>${ws.user_display_name || '-'}</td>
                 <td><span class="badge badge-${ws.state?.toLowerCase() || 'unknown'}">${ws.state || '-'}</span></td>
@@ -174,7 +174,7 @@ async function showWorkspaceDetails(id) {
                 <div class="col-md-6">
                     <h6>Basic Info</h6>
                     <table class="table table-sm">
-                        <tr><th>ID</th><td><code>${workspace.id}</code></td></tr>
+                        <tr><th>ID</th><td><code>${workspace.workspace_id}</code></td></tr>
                         <tr><th>Assigned To</th><td>${workspace.user_name}</td></tr>
                         <tr><th>Display Name</th><td>${workspace.user_display_name || '-'}</td></tr>
                         <tr><th>State</th><td><span class="badge badge-${workspace.state?.toLowerCase()}">${workspace.state}</span></td></tr>

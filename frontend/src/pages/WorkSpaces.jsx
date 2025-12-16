@@ -117,8 +117,8 @@ function WorkSpaces() {
   const columns = [
     {
       title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
+      dataIndex: 'workspace_id',
+      key: 'workspace_id',
       width: 200,
       render: (text) => <code style={{ fontSize: '12px' }}>{text}</code>,
     },
@@ -290,7 +290,7 @@ function WorkSpaces() {
         <Table
           columns={columns}
           dataSource={workspaces}
-          rowKey="id"
+          rowKey="workspace_id"
           loading={loading}
           pagination={{
             current: pagination.current,

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"time"
 
@@ -47,10 +48,15 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 	currentMonth := getCurrentYearMonth()
 	usageSummary, err := models.GetMonthlyUsageSummary(h.DB, currentMonth)
 	if err != nil {
-		// If there's an error, return empty usage stats
+		// Log error for debugging data quality or connectivity issues
+		log.Printf("Failed to load monthly usage summary for %s: %v", currentMonth, err)
+		// If there's an error, return empty usage stats with all expected fields
 		stats.CurrentMonthUsage = map[string]interface{}{
-			"total_hours": 0.0,
-			"avg_hours":   0.0,
+			"workspace_count": 0,
+			"total_hours":     0.0,
+			"avg_hours":       0.0,
+			"max_hours":       0.0,
+			"min_hours":       0.0,
 		}
 	} else {
 		stats.CurrentMonthUsage = usageSummary
@@ -59,7 +65,7 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 	// Get last sync timestamp
 	var lastSyncTime sql.NullString
 	err = h.DB.QueryRow(`
-		SELECT TO_CHAR(completed_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+		SELECT TO_CHAR(completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
 		FROM sync_history
 		WHERE status = 'completed'
 		ORDER BY completed_at DESC

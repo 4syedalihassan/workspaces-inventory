@@ -104,23 +104,28 @@ func (s *AWSService) SyncWorkSpaces(ctx context.Context) (int, error) {
 	// Create WorkSpaces client
 	client := workspaces.NewFromConfig(cfg)
 
-	// Describe all workspaces
+	// Describe all workspaces using pagination
 	log.Println("Fetching WorkSpaces from AWS (legacy mode)...")
 	input := &workspaces.DescribeWorkspacesInput{}
-	result, err := client.DescribeWorkspaces(ctx, input)
-	if err != nil {
-		return 0, fmt.Errorf("failed to describe workspaces: %w", err)
-	}
 
 	count := 0
-	for _, ws := range result.Workspaces {
-		// Upsert workspace without account ID (legacy)
-		err := s.upsertWorkspace(ws, 0)
+	paginator := workspaces.NewDescribeWorkspacesPaginator(client, input)
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
 		if err != nil {
-			log.Printf("Failed to upsert workspace %s: %v", *ws.WorkspaceId, err)
-			continue
+			return count, fmt.Errorf("failed to get page: %w", err)
 		}
-		count++
+
+		for _, ws := range page.Workspaces {
+			// Upsert workspace without account ID (legacy)
+			err := s.upsertWorkspace(ws, 0)
+			if err != nil {
+				log.Printf("Failed to upsert workspace %s: %v", *ws.WorkspaceId, err)
+				continue
+			}
+			count++
+		}
 	}
 
 	log.Printf("Successfully synced %d workspaces", count)
@@ -137,23 +142,28 @@ func (s *AWSService) SyncWorkSpacesForAccount(ctx context.Context, accountID int
 	// Create WorkSpaces client
 	client := workspaces.NewFromConfig(cfg)
 
-	// Describe all workspaces
+	// Describe all workspaces using pagination
 	log.Printf("Fetching WorkSpaces from AWS for account ID %d...", accountID)
 	input := &workspaces.DescribeWorkspacesInput{}
-	result, err := client.DescribeWorkspaces(ctx, input)
-	if err != nil {
-		return 0, fmt.Errorf("failed to describe workspaces: %w", err)
-	}
 
 	count := 0
-	for _, ws := range result.Workspaces {
-		// Upsert workspace with account ID
-		err := s.upsertWorkspace(ws, accountID)
+	paginator := workspaces.NewDescribeWorkspacesPaginator(client, input)
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
 		if err != nil {
-			log.Printf("Failed to upsert workspace %s: %v", *ws.WorkspaceId, err)
-			continue
+			return count, fmt.Errorf("failed to get page: %w", err)
 		}
-		count++
+
+		for _, ws := range page.Workspaces {
+			// Upsert workspace with account ID
+			err := s.upsertWorkspace(ws, accountID)
+			if err != nil {
+				log.Printf("Failed to upsert workspace %s: %v", *ws.WorkspaceId, err)
+				continue
+			}
+			count++
+		}
 	}
 
 	// Update last sync timestamp for the account
